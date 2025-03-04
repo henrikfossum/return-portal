@@ -1,4 +1,4 @@
-// src/components/return/ProductCard.js
+// src/components/return/ProductCard.js with improved styling
 import React from 'react';
 import { Package } from 'lucide-react';
 import Card from '@/components/ui/Card';
@@ -20,16 +20,6 @@ export default function ProductCard({
     const newQty = Math.max(0, Math.min(quantity + change, maxQuantity));
     onQuantityChange(product.id, newQty);
   };
-
-  // Debug logging with more detailed information
-  console.log('Product Card Debug:', {
-    productId: product.id,
-    title: product.title || product.name,
-    variantImage: product.variant_image,
-    productImage: product.product_image,
-    imageUrl: product.imageUrl,
-    fullProduct: product
-  });
 
   // Image loading priority cascade with better error handling
   const getImageUrl = () => {
@@ -114,7 +104,7 @@ export default function ProductCard({
             </div>
           )}
           
-          {/* Quantity selector */}
+          {/* Quantity selector - UPDATED WITH BETTER CONTRAST */}
           {showQuantitySelector && onQuantityChange && (
             <div className="mt-2 flex items-center space-x-2">
               <button
@@ -122,14 +112,14 @@ export default function ProductCard({
                   e.stopPropagation();
                   handleQuantityChange(-1);
                 }}
-                className="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50 touch-manipulation"
+                className="p-2 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-700 disabled:opacity-50 touch-manipulation"
                 disabled={quantity <= 0}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                 </svg>
               </button>
-              <span className="w-8 text-center text-sm sm:text-base">
+              <span className="w-8 text-center text-sm sm:text-base text-gray-800 font-medium">
                 {quantity}
               </span>
               <button
@@ -137,7 +127,7 @@ export default function ProductCard({
                   e.stopPropagation();
                   handleQuantityChange(1);
                 }}
-                className="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50 touch-manipulation"
+                className="p-2 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-700 disabled:opacity-50 touch-manipulation"
                 disabled={quantity >= maxQuantity}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

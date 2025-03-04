@@ -1,7 +1,7 @@
 // src/pages/return-review.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { CheckCircle, ArrowLeft, RefreshCw, Package } from 'lucide-react';
+import { CheckCircle, ArrowLeft, RefreshCw, Package, ArrowRight } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import Layout from '@/components/ui/Layout';
 import Card from '@/components/ui/Card';
@@ -182,22 +182,27 @@ export default function ReturnReview() {
                       <div>
                         <p className="font-medium text-sm text-gray-900">{item.title}</p>
                         <div className="mt-2 text-xs text-gray-700 space-y-1">
-                          {item.exchangeDetails.originalSize !== item.exchangeDetails.newSize && (
+                          {item.exchangeDetails?.originalSize !== item.exchangeDetails?.newSize && (
                             <p className="flex items-center">
                               <span className="w-16 inline-block">Size:</span> 
-                              <span className="line-through mr-2">{item.exchangeDetails.originalSize}</span>
+                              <span className="line-through mr-2">{item.exchangeDetails?.originalSize || 'N/A'}</span>
                               <ArrowRight className="w-3 h-3 mx-1" />
-                              <span className="font-medium">{item.exchangeDetails.newSize}</span>
+                              <span className="font-medium">{item.exchangeDetails?.newSize || 'N/A'}</span>
                             </p>
                           )}
                           
-                          {item.exchangeDetails.originalColor !== item.exchangeDetails.newColor && (
+                          {item.exchangeDetails?.originalColor !== item.exchangeDetails?.newColor && (
                             <p className="flex items-center">
                               <span className="w-16 inline-block">Color:</span> 
-                              <span className="line-through mr-2">{item.exchangeDetails.originalColor}</span>
+                              <span className="line-through mr-2">{item.exchangeDetails?.originalColor || 'N/A'}</span>
                               <ArrowRight className="w-3 h-3 mx-1" />
-                              <span className="font-medium">{item.exchangeDetails.newColor}</span>
+                              <span className="font-medium">{item.exchangeDetails?.newColor || 'N/A'}</span>
                             </p>
+                          )}
+                          
+                          {item.exchangeDetails?.originalSize === item.exchangeDetails?.newSize && 
+                           item.exchangeDetails?.originalColor === item.exchangeDetails?.newColor && (
+                            <p className="italic">Same size and color as original item</p>
                           )}
                         </div>
                       </div>

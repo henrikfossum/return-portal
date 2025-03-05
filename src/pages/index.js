@@ -1,11 +1,11 @@
 // src/pages/index.js
 import { useState } from 'react';
-import { Box, Search } from 'lucide-react';
+import { Box, Search, Mail, Check, ShieldCheck } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantTheme } from '@/lib/tenant/hooks';
-import Layout from '@/components/ui/Layout';
-import Card from '@/components/ui/Card';
+import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
+import { motion } from 'framer-motion';
 
 export default function Home() {
   const [orderId, setOrderId] = useState('');
@@ -24,77 +24,151 @@ export default function Home() {
     }
   };
 
+  // Animation variants for form elements
+  const formVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i) => ({ 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        delay: i * 0.1,
+        duration: 0.4,
+        ease: "easeOut" 
+      } 
+    })
+  };
+
   return (
-    <Layout>
-      <div className="max-w-md mx-auto p-4">
-        <Card
-          title="Start Your Return"
-          subtitle="Please enter your order details below"
-          padding="large"
-          elevation="medium"
-          className="mt-8"
-        >
+    <ReturnLayout currentStep={1} title="Start Your Return">
+      <div className="px-6 py-8 md:py-10">
+        <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
               <Box style={{ color: theme?.primaryColor }} className="w-8 h-8" />
             </div>
+            <h2 className="text-2xl font-bold text-gray-900">Start Your Return</h2>
+            <p className="mt-2 text-gray-600">
+              Enter your order details below to begin the return process
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit}>
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 mb-6 bg-red-50 border border-red-100 rounded-lg"
+              >
                 <p className="text-sm text-red-600">{error}</p>
-              </div>
+              </motion.div>
             )}
 
-            <div className="space-y-5">
-              <div>
+            <div className="space-y-6">
+              <motion.div 
+                custom={0}
+                initial="hidden"
+                animate="visible"
+                variants={formVariants}
+              >
                 <label htmlFor="orderId" className="block text-sm font-medium text-gray-700 mb-2">
                   Order ID
                 </label>
-                <input
-                  type="text"
-                  id="orderId"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  className="w-full px-4 h-12 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                  placeholder="Enter your order ID"
-                  disabled={loading}
-                  required
-                />
-              </div>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Box className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="orderId"
+                    value={orderId}
+                    onChange={(e) => setOrderId(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your order ID"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              </motion.div>
 
-              <div>
+              <motion.div
+                custom={1}
+                initial="hidden"
+                animate="visible"
+                variants={formVariants}
+              >
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 h-12 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                  placeholder="Enter your email address"
-                  disabled={loading}
-                  required
-                />
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your email address"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div
+                custom={2}
+                initial="hidden"
+                animate="visible"
+                variants={formVariants}
+              >
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  isLoading={loading}
+                  icon={<Search className="w-4 h-4" />}
+                  disabled={!orderId || !email || loading}
+                >
+                  {loading ? 'Looking Up Order...' : 'Look Up Order'}
+                </Button>
+              </motion.div>
+            </div>
+          </form>
+          
+          {/* Extra info section */}
+          <motion.div 
+            custom={3}
+            initial="hidden"
+            animate="visible"
+            variants={formVariants}
+            className="mt-10 bg-gray-50 p-4 rounded-lg border border-gray-200"
+          >
+            <h3 className="text-sm font-medium text-gray-700 mb-3">What to Expect</h3>
+            <div className="space-y-3">
+              <div className="flex">
+                <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="ml-2 text-sm text-gray-600">
+                  <span className="font-medium">Fast & Easy:</span> Our return process typically takes less than 2 minutes to complete.
+                </p>
+              </div>
+              <div className="flex">
+                <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="ml-2 text-sm text-gray-600">
+                  <span className="font-medium">Free Returns:</span> We cover return shipping costs for all standard returns.
+                </p>
+              </div>
+              <div className="flex">
+                <ShieldCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="ml-2 text-sm text-gray-600">
+                  <span className="font-medium">Quick Refunds:</span> Refunds are typically processed within 3-5 business days.
+                </p>
               </div>
             </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              fullWidth
-              isLoading={loading}
-              icon={<Search className="w-4 h-4" />}
-              disabled={!orderId || !email}
-            >
-              {loading ? 'Looking Up Order...' : 'Look Up Order'}
-            </Button>
-          </form>
-        </Card>
+          </motion.div>
+        </div>
       </div>
-    </Layout>
+    </ReturnLayout>
   );
 }

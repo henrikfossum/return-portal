@@ -1,19 +1,24 @@
 // src/pages/return-options/[id].js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, RefreshCw, Package } from 'lucide-react';
+import { RefreshCw, ArrowRight, RotateCcw } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantSettings } from '@/lib/tenant/hooks';
-import Layout from '@/components/ui/Layout';
-import Card from '@/components/ui/Card';
+import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import ProductCard from '@/components/return/ProductCard';
 import ExchangeOptions from '@/components/return/ExchangeOptions';
+import { motion } from 'framer-motion';
 
 export default function ReturnOptions() {
   const router = useRouter();
   const { id } = router.query;
-  const { order, itemsToReturn, setItemReturnOption, loading } = useReturnFlow();
+  const { 
+    order, 
+    itemsToReturn, 
+    setItemReturnOption, 
+    loading 
+  } = useReturnFlow();
   const { settings } = useTenantSettings();
   
   const [selectedOption, setSelectedOption] = useState('');
@@ -59,59 +64,82 @@ export default function ReturnOptions() {
     setExchangeDetails(details);
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   // Loading state
   if (!order || !currentItem) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading...</p>
+      <ReturnLayout 
+        currentStep={4} 
+        title="Return Options"
+        showBackButton={true}
+        onBackClick={handleBack}
+      >
+        <div className="p-6 text-center py-12">
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-500">Loading item details...</p>
           </div>
         </div>
-      </Layout>
+      </ReturnLayout>
     );
   }
 
   return (
-    <Layout>
-      <div className="max-w-3xl mx-auto p-4">
-        {/* Back button */}
-        <button 
-          onClick={handleBack}
-          className="flex items-center text-gray-600 mb-4 hover:text-gray-900 transition"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          <span>Back</span>
-        </button>
+    <ReturnLayout 
+      currentStep={4} 
+      title="Return Options"
+      showBackButton={true}
+      onBackClick={handleBack}
+    >
+      <div className="p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-medium text-gray-900">Choose Return or Exchange</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Would you prefer a refund or an exchange for this item?
+          </p>
+        </div>
         
-        <Card
-          title="Select Return Option"
-          subtitle="Would you prefer a return or exchange?"
-          padding="normal"
-          elevation="low"
-        >
-          {/* Product card */}
-          <div className="my-6">
-            <ProductCard
-              product={currentItem}
-              showQuantitySelector={false}
-            />
-          </div>
+        {/* Product preview */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <ProductCard
+            product={currentItem}
+            showQuantitySelector={false}
+          />
+        </div>
 
-          {/* Option selection */}
-          <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Choose an option:</h3>
-            
-            <div className="space-y-3">
-              {/* Return option */}
+        {/* Option selection */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-4 mb-6"
+        >
+          <h3 className="font-medium text-gray-900">Select an option:</h3>
+          
+          <div className="grid gap-3">
+            {/* Return option */}
+            <motion.div variants={itemVariants}>
               <label 
                 className={`
                   block p-4 border rounded-lg cursor-pointer transition
                   ${selectedOption === 'return'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }
+                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                    : 'border-gray-200 hover:border-gray-300'}
                 `}
               >
                 <div className="flex items-center">
@@ -121,24 +149,25 @@ export default function ReturnOptions() {
                     value="return"
                     checked={selectedOption === 'return'}
                     onChange={() => setSelectedOption('return')}
-                    className="mr-3 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                   />
-                  <div>
+                  <div className="ml-3">
                     <span className="text-gray-900 font-medium block">Return for refund</span>
                     <span className="text-gray-500 text-sm">Refund will be processed to your original payment method</span>
                   </div>
                 </div>
               </label>
-              
-              {/* Exchange option, only show if allowed */}
-              {allowExchanges && (
+            </motion.div>
+            
+            {/* Exchange option, only show if allowed */}
+            {allowExchanges && (
+              <motion.div variants={itemVariants}>
                 <label 
                   className={`
                     block p-4 border rounded-lg cursor-pointer transition
                     ${selectedOption === 'exchange'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                    }
+                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-gray-200 hover:border-gray-300'}
                   `}
                 >
                   <div className="flex items-center">
@@ -148,48 +177,48 @@ export default function ReturnOptions() {
                       value="exchange"
                       checked={selectedOption === 'exchange'}
                       onChange={() => setSelectedOption('exchange')}
-                      className="mr-3 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                     />
-                    <div>
+                    <div className="ml-3">
                       <span className="text-gray-900 font-medium block">Exchange for another size/color</span>
                       <span className="text-gray-500 text-sm">We'll ship a replacement product to you</span>
                     </div>
                   </div>
                 </label>
-              )}
-            </div>
+              </motion.div>
+            )}
           </div>
-          
-          {/* Exchange options - now using the ExchangeOptions component */}
-          {selectedOption === 'exchange' && (
-            <div className="mt-6">
-              <ExchangeOptions 
-                product={currentItem} 
-                onExchangeDetailsChange={handleExchangeDetailsChange}
-              />
-            </div>
-          )}
-          
-          {/* Continue button */}
-          <div className="mt-6">
-            <Button
-              onClick={handleContinue}
-              disabled={!selectedOption || (selectedOption === 'exchange' && !exchangeDetails)}
-              variant="primary"
-              fullWidth
-              size="lg"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              }
-              iconPosition="right"
-            >
-              Continue
-            </Button>
-          </div>
-        </Card>
+        </motion.div>
+        
+        {/* Exchange options - only show when exchange is selected */}
+        {selectedOption === 'exchange' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            transition={{ duration: 0.3 }}
+            className="mb-6"
+          >
+            <ExchangeOptions 
+              product={currentItem} 
+              onExchangeDetailsChange={handleExchangeDetailsChange}
+            />
+          </motion.div>
+        )}
+        
+        {/* Continue button */}
+        <div className="flex justify-end">
+          <Button
+            onClick={handleContinue}
+            disabled={!selectedOption || (selectedOption === 'exchange' && !exchangeDetails)}
+            variant="primary"
+            size="lg"
+            icon={<ArrowRight className="w-5 h-5" />}
+            iconPosition="right"
+          >
+            Continue
+          </Button>
+        </div>
       </div>
-    </Layout>
+    </ReturnLayout>
   );
 }

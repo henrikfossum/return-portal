@@ -1,6 +1,6 @@
 // src/components/return/ExchangeOptions.js
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Check } from 'lucide-react';
 
 export default function ExchangeOptions({ 
   product, 
@@ -52,11 +52,14 @@ export default function ExchangeOptions({
         const response = await fetch(`/api/products/variants?productId=${product.product_id}`);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch product variants');
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch product variants: ${errorText}`);
         }
         
         const data = await response.json();
         setProductData(data);
+        
+        console.log("Product variants data:", data);
         
         // Process variants
         if (data.variants) {
@@ -83,7 +86,7 @@ export default function ExchangeOptions({
           );
           
           if (sizeOption) {
-            const inStockSizes = data.inStockOptions[sizeOption.name.toLowerCase()] || [];
+            const inStockSizes = data.inStockOptions?.[sizeOption.name.toLowerCase()] || [];
             setSizeOptions(inStockSizes);
           }
           
@@ -93,7 +96,7 @@ export default function ExchangeOptions({
           );
           
           if (colorOption) {
-            const inStockColors = data.inStockOptions[colorOption.name.toLowerCase()] || [];
+            const inStockColors = data.inStockOptions?.[colorOption.name.toLowerCase()] || [];
             setColorOptions(inStockColors);
           }
           
@@ -110,7 +113,7 @@ export default function ExchangeOptions({
               otherOpts[optionName] = {
                 id: option.id,
                 name: option.name,
-                values: data.inStockOptions[optionName] || []
+                values: data.inStockOptions?.[optionName] || []
               };
             });
             setOtherOptions(otherOpts);
@@ -118,7 +121,7 @@ export default function ExchangeOptions({
         }
       } catch (err) {
         console.error('Error fetching product variants:', err);
-        setError('Unable to load product options. Please try again later.');
+        setError('Unable to load product options: ' + err.message);
       } finally {
         setLoading(false);
       }
@@ -178,6 +181,9 @@ export default function ExchangeOptions({
     
     // Find the matching variant
     const matchingVariant = variants.find(v => v.title === variantTitle);
+    
+    console.log("Looking for variant:", variantTitle);
+    console.log("Found matching variant:", matchingVariant);
     
     setSelectedVariant(matchingVariant);
     
@@ -258,7 +264,7 @@ export default function ExchangeOptions({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Size
           </label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {sizeOptions.map(size => (
               <button
                 key={size}
@@ -290,7 +296,7 @@ export default function ExchangeOptions({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Color
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {colorOptions.map(color => (
               <button
                 key={color}
@@ -324,7 +330,7 @@ export default function ExchangeOptions({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {option.name}
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {option.values.map(value => (
                   <button
                     key={value}
@@ -366,9 +372,7 @@ export default function ExchangeOptions({
           <>
             {selectedVariant.isAvailable ? (
               <p className="text-sm font-medium text-green-800 flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                </svg>
+                <Check className="w-4 h-4 mr-1 text-green-500" />
                 In Stock ({selectedVariant.inventory} available)
               </p>
             ) : (
@@ -382,9 +386,7 @@ export default function ExchangeOptions({
           </>
         ) : (
           <p className="text-sm font-medium text-red-800 flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
+            <AlertCircle className="w-4 h-4 mr-1 text-red-500" />
             Selected combination not available
           </p>
         )}

@@ -40,25 +40,58 @@ export default async function handler(req, res) {
     const product = body.product;
     const variants = product.variants || [];
     
-    // Get inventory levels for variants
+    // Get inventory levels for variants - FIXED APPROACH
     const variantsWithInventory = await Promise.all(
       variants.map(async (variant) => {
         try {
-          const { body: inventoryBody } = await client.get({
-            path: `variants/${variant.id}/inventory_level`,
-          });
+          // Instead of fetching individual inventory levels which might not exist,
+          // use the variant information directly or fetch inventory items
+          // Shopify API changed and not all variants have direct inventory_level endpoints
+          
+          // First try to get inventory data if available
+          let inventory = 0;
+          let isAvailable = false;
+          
+          try {
+            // Try to get inventory item ID
+            const { body: variantData } = await client.get({
+              path: `variants/${variant.id}`,
+            });
+            
+            if (variantData?.variant?.inventory_item_id) {
+              // If we have inventory_item_id, try to get inventory level
+              const { body: inventoryData } = await client.get({
+                path: `inventory_items/${variantData.variant.inventory_item_id}`,
+              });
+              
+              // Parse available inventory based on inventory policy and quantity
+              if (inventoryData?.inventory_item) {
+                inventory = variantData.variant.inventory_quantity || 0;
+                
+                // If inventory_policy is 'continue', item is available even with 0 inventory
+                isAvailable = variantData.variant.inventory_policy === 'continue' || inventory > 0;
+              }
+            }
+          } catch (inventoryError) {
+            console.log(`Using fallback inventory check for variant ${variant.id}`);
+            
+            // Fallback: Use the variant's own inventory fields
+            inventory = variant.inventory_quantity || 0;
+            isAvailable = variant.inventory_policy === 'continue' || inventory > 0;
+          }
           
           return {
             ...variant,
-            inventory: inventoryBody?.inventory_level?.available || 0,
-            isAvailable: (inventoryBody?.inventory_level?.available || 0) > 0
+            inventory,
+            isAvailable
           };
         } catch (err) {
           console.error(`Error fetching inventory for variant ${variant.id}:`, err);
           return {
             ...variant,
             inventory: 0,
-            isAvailable: false
+            isAvailable: false,
+            error: err.message
           };
         }
       })

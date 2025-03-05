@@ -1,6 +1,164 @@
 // src/pages/api/admin/analytics.js
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
+// Get settings for fraud prevention
+async function getSettings(tenantId) {
+  // In a real app, this would be fetched from a database
+  // For now, we'll use mock settings from our in-memory cache
+  // or return defaults if not found
+  try {
+    const response = await fetch(`http://localhost:3000/api/admin/settings`, {
+      headers: {
+        'Authorization': 'Bearer demo-admin-token',
+        'x-tenant-id': tenantId
+      }
+    });
+    
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.error("Error fetching settings:", error);
+  }
+  
+  // Return default settings if API call fails
+  return {
+    fraudPrevention: {
+      enabled: true,
+      maxReturnsPerCustomer: 3,
+      maxReturnValuePercent: 80,
+      suspiciousPatterns: {
+        frequentReturns: true,
+        highValueReturns: true,
+        noReceiptReturns: true,
+        newAccountReturns: true,
+        addressMismatch: true
+      },
+      autoFlagThreshold: 2
+    }
+  };
+}
+
+// Analyze returns for fraud detection
+function analyzeReturnsForFraud(orders, returns, settings) {
+  const customers = {};
+  const flaggedReturns = [];
+  
+  // Group returns by customer
+  returns.forEach(order => {
+    const customerId = order.customer?.id || order.email;
+    if (!customerId) return;
+    
+    if (!customers[customerId]) {
+      customers[customerId] = {
+        id: customerId,
+        email: order.email,
+        name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest',
+        returns: [],
+        totalReturnValue: 0
+      };
+    }
+    
+    // Add this order to the customer's returns
+    customers[customerId].returns.push(order);
+    
+    // Calculate return value
+    let returnValue = 0;
+    if (order.refunds && order.refunds.length > 0) {
+      returnValue = order.refunds.reduce((total, refund) => 
+        total + parseFloat(refund.transactions?.[0]?.amount || 0), 0);
+    } else {
+      returnValue = parseFloat(order.total_price || 0);
+    }
+    
+    customers[customerId].totalReturnValue += returnValue;
+  });
+  
+  // Count of customers with multiple returns
+  const repeatReturners = Object.values(customers).filter(c => c.returns.length > settings.fraudPrevention.maxReturnsPerCustomer).length;
+  
+  // Find suspicious returns based on settings
+  returns.forEach(order => {
+    const customerId = order.customer?.id || order.email;
+    if (!customerId) return;
+    
+    const customer = customers[customerId];
+    const riskFactors = [];
+    
+    // Check for frequent returns
+    if (settings.fraudPrevention.suspiciousPatterns.frequentReturns && 
+        customer.returns.length > settings.fraudPrevention.maxReturnsPerCustomer) {
+      riskFactors.push('Frequent Returns');
+    }
+    
+    // Check for high-value returns
+    const orderTotal = parseFloat(order.total_price || 0);
+    let returnValue = 0;
+    if (order.refunds && order.refunds.length > 0) {
+      returnValue = order.refunds.reduce((total, refund) => 
+        total + parseFloat(refund.transactions?.[0]?.amount || 0), 0);
+    } else {
+      returnValue = orderTotal;
+    }
+    
+    const returnPercent = (returnValue / orderTotal) * 100;
+    if (settings.fraudPrevention.suspiciousPatterns.highValueReturns && 
+        returnPercent > settings.fraudPrevention.maxReturnValuePercent) {
+      riskFactors.push('High Value Return');
+    }
+    
+    // Check for address mismatch
+    if (settings.fraudPrevention.suspiciousPatterns.addressMismatch && 
+        order.shipping_address && order.billing_address) {
+      const shipping = order.shipping_address;
+      const billing = order.billing_address;
+      
+      // Simple check - could be more sophisticated in production
+      if (shipping.address1 !== billing.address1 || 
+          shipping.city !== billing.city || 
+          shipping.zip !== billing.zip) {
+        riskFactors.push('Address Mismatch');
+      }
+    }
+    
+    // Check for new account returns
+    if (settings.fraudPrevention.suspiciousPatterns.newAccountReturns && 
+        order.customer && order.customer.created_at) {
+      const accountAge = new Date(order.created_at) - new Date(order.customer.created_at);
+      const accountAgeDays = accountAge / (1000 * 60 * 60 * 24);
+      
+      if (accountAgeDays < 30) { // Less than 30 days old
+        riskFactors.push('New Account');
+      }
+    }
+    
+    // If enough risk factors are present, flag the return
+    if (riskFactors.length >= settings.fraudPrevention.autoFlagThreshold) {
+      flaggedReturns.push({
+        id: order.id,
+        order_id: `#${order.order_number}`,
+        customer: customer.name,
+        email: order.email,
+        value: returnValue,
+        date: order.created_at,
+        risk_factors: riskFactors
+      });
+    }
+  });
+  
+  // Calculate rate change
+  // For simplicity, we'll just get a random percentage between -20 and 20
+  // In a real app, this would compare current period to previous
+  const rateChange = Math.round((Math.random() * 40) - 20);
+  
+  return {
+    highRiskCount: flaggedReturns.length,
+    repeatReturners,
+    rateChange,
+    flaggedReturns: flaggedReturns.slice(0, 5) // Just return top 5 for display
+  };
+}
+
 export default async function handler(req, res) {
   // Check for admin authorization
   const adminToken = req.headers.authorization?.split(' ')[1];
@@ -100,7 +258,7 @@ export default async function handler(req, res) {
     returns.forEach(order => {
       if (order.refunds) {
         order.refunds.forEach(refund => {
-          refund.refund_line_items.forEach(item => {
+          refund.refund_line_items?.forEach(item => {
             const reason = item.reason || 'Not specified';
             reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
           });
@@ -161,6 +319,12 @@ export default async function handler(req, res) {
     // Convert to array and sort by month
     const timelineData = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
     
+    // Get fraud prevention settings
+    const settings = await getSettings(tenantId);
+    
+    // Analyze returns for potential fraud
+    const fraudStats = analyzeReturnsForFraud(orders, returns, settings);
+    
     // Return analytics data
     return res.status(200).json({
       summary: {
@@ -171,6 +335,8 @@ export default async function handler(req, res) {
       },
       timeline: timelineData,
       reasons: topReasons,
+      fraudStats,
+      flaggedReturns: fraudStats.flaggedReturns,
       timeframe
     });
     

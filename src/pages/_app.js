@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import '@/styles/globals.css';
 import { ReturnProvider } from '@/lib/context/ReturnContext';
+import { AdminProvider } from '@/lib/context/AdminContext';
 
 function ProgressTracker({ Component, pageProps }) {
   const router = useRouter();
@@ -27,6 +28,11 @@ function ProgressTracker({ Component, pageProps }) {
     }
   }, [router.pathname]);
 
+  // Don't show progress for admin routes
+  if (router.pathname.startsWith('/admin')) {
+    return <Component {...pageProps} />;
+  }
+
   return (
     <>
       <Head>
@@ -41,6 +47,20 @@ function ProgressTracker({ Component, pageProps }) {
 }
 
 export default function App(props) {
+  const router = useRouter();
+  
+  // Determine if this is an admin route
+  const isAdminRoute = router.pathname.startsWith('/admin');
+
+  // Wrap with appropriate providers based on route
+  if (isAdminRoute) {
+    return (
+      <AdminProvider>
+        <ProgressTracker {...props} />
+      </AdminProvider>
+    );
+  }
+
   return (
     <ReturnProvider>
       <ProgressTracker {...props} />

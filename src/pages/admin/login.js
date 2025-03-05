@@ -4,42 +4,34 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { useAdmin } from '@/lib/context/AdminContext';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const router = useRouter();
+  const { login, isAuthenticated, loading, error } = useAdmin();
   
   useEffect(() => {
-    // Check if already logged in
-    const token = localStorage.getItem('adminToken');
-    if (token) {
+    // Redirect if already authenticated
+    if (isAuthenticated && !loading) {
       router.replace('/admin');
     }
-  }, [router]);
+  }, [isAuthenticated, loading, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
     
-    try {
-      // For MVP: Use hardcoded credentials
-      if (email === 'admin@example.com' && password === 'password123') {
-        // Set a simple token in localStorage
-        localStorage.setItem('adminToken', 'demo-admin-token');
-        router.push('/admin');
-      } else {
-        setError('Invalid credentials');
-      }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setLoading(false);
+    const success = await login(email, password);
+    if (success) {
+      router.push('/admin');
     }
   };
+
+  // If already authenticated, don't render login form
+  if (isAuthenticated && !loading) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -67,8 +59,10 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="admin@example.com"
                   required
                 />
+                <p className="mt-1 text-xs text-gray-500">For demo: admin@example.com</p>
               </div>
               
               <div>
@@ -81,8 +75,10 @@ export default function AdminLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="password123"
                   required
                 />
+                <p className="mt-1 text-xs text-gray-500">For demo: password123</p>
               </div>
             </div>
             

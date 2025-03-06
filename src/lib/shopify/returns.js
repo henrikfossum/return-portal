@@ -163,17 +163,24 @@ async function approveReturn(returnId) {
 
 export async function processExchange(orderId, lineItemId, variantId, quantity = 1) {
   try {
+    // Ensure orderId is a string
+    const safeOrderId = orderId ? orderId.toString() : null;
+    
+    if (!safeOrderId) {
+      throw new Error('Invalid order ID for exchange');
+    }
+
     // Step 1: Process the return
-    await processReturn(orderId, lineItemId, quantity);
+    await processReturn(safeOrderId, lineItemId, quantity);
     
     // Step 2: Create a draft order for the exchange
-    const draftOrderData = await createExchangeDraftOrder(variantId, quantity);
+    const draftOrderData = await createExchangeDraftOrder(variantId, quantity, safeOrderId);
     
     // Step 3: Complete the draft order
     const completedOrder = await completeDraftOrder(draftOrderData.draftOrder.id);
     
-    // Step 4: Update order notes
-    await updateOrderNotes(orderId, completedOrder.id);
+    // Step 4: Update order notes to link the orders
+    await updateOrderNotes(safeOrderId, completedOrder.id, `Exchange for line item ${lineItemId}`);
     
     return {
       success: true,
@@ -182,6 +189,49 @@ export async function processExchange(orderId, lineItemId, variantId, quantity =
     };
   } catch (error) {
     console.error('Error processing exchange:', error);
+    throw error;
+  }
+}
+
+async function updateOrderNotes(originalOrderId, newOrderId, exchangeNotes = '') {
+  try {
+    // Use Shopify REST API to update order notes
+    const updateOrderNoteMutation = `
+      mutation orderUpdate($input: OrderInput!) {
+        orderUpdate(input: $input) {
+          order {
+            id
+            note
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlClient.query({
+      data: {
+        query: updateOrderNoteMutation,
+        variables: {
+          input: {
+            id: `gid://shopify/Order/${originalOrderId}`,
+            note: `Exchange processed. New order: ${newOrderId}. ${exchangeNotes}`
+          }
+        }
+      }
+    });
+
+    const updateData = response.body?.data?.orderUpdate;
+    
+    if (updateData?.userErrors && updateData.userErrors.length > 0) {
+      throw new Error(`Failed to update order notes: ${updateData.userErrors[0].message}`);
+    }
+
+    return updateData;
+  } catch (error) {
+    console.error('Error updating order notes:', error);
     throw error;
   }
 }
@@ -272,10 +322,4 @@ async function completeDraftOrder(draftOrderId) {
   }
   
   return completeData.draftOrder.order;
-}
-
-async function updateOrderNotes(originalOrderId, newOrderId) {
-  // Implement updating order notes via REST API
-  // This is simplified for brevity
-  return true;
 }

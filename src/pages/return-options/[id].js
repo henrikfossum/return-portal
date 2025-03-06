@@ -49,10 +49,18 @@ export default function ReturnOptions() {
   const handleContinue = () => {
     if (!selectedOption) return;
     
-    // For exchange, make sure we have some details
-    if (selectedOption === 'exchange' && !exchangeDetails) {
-      alert('Please select exchange options');
-      return;
+    // For exchange, add an additional check to prevent selecting the current size
+    if (selectedOption === 'exchange') {
+      if (!exchangeDetails) {
+        alert('Please select exchange options');
+        return;
+      }
+      
+      // Prevent continuing if no actual change was made
+      if (exchangeDetails.originalSize === exchangeDetails.newSize) {
+        alert('Please select a different size for exchange');
+        return;
+      }
     }
     
     setItemReturnOption(id, selectedOption, exchangeDetails);

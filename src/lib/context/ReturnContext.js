@@ -34,32 +34,25 @@ function returnReducer(state, action) {
       return { ...state, order: action.payload, error: null };
     case actions.SELECT_ITEMS:
       return { ...state, itemsToReturn: action.payload };
-    case actions.SET_RETURN_REASON: {
-      const { itemId, reason } = action.payload;
-      return {
-        ...state,
-        returnReasons: { ...state.returnReasons, [itemId]: reason },
-      };
-    }
-    case actions.SET_RETURN_OPTION: {
-      const { itemId, option, details } = action.payload;
-      const updatedItems = state.itemsToReturn.map(item => {
-        if (item.id.toString() === itemId.toString()) {
-          return {
-            ...item,
-            returnOption: option,
-            exchangeDetails: option === 'exchange' ? details : null,
-          };
-        }
-        return item;
-      });
-      
-      return {
-        ...state,
-        itemsToReturn: updatedItems,
-        returnOptions: { ...state.returnOptions, [itemId]: { option, details } },
-      };
-    }
+      case actions.SET_RETURN_OPTION: {
+        const { itemId, option, details } = action.payload;
+        const updatedItems = state.itemsToReturn.map(item => {
+          if (item.id.toString() === itemId.toString()) {
+            return {
+              ...item,
+              returnOption: option || 'return', // Ensure a default option
+              exchangeDetails: option === 'exchange' ? details : null,
+            };
+          }
+          return item;
+        });
+        
+        return {
+          ...state,
+          itemsToReturn: updatedItems,
+          returnOptions: { ...state.returnOptions, [itemId]: { option: option || 'return', details } },
+        };
+      }
     case actions.SET_LOADING:
       return { ...state, loading: action.payload };
     case actions.SET_ERROR:

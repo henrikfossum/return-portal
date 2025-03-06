@@ -8,17 +8,40 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --input-text: #000000;
+  --input-placeholder: #6b7280;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f0f0f0;
+  --input-text: #f0f0f0;
+  --input-placeholder: #a0a0a0;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Improve input and placeholder visibility in dark mode */
+input, 
+textarea, 
+select {
+  color: var(--input-text) !important;
+}
+
+input::placeholder, 
+textarea::placeholder, 
+select::placeholder {
+  color: var(--input-placeholder) !important;
+}
+
+/* Optional: Ensure form elements have good contrast */
+.dark input, 
+.dark textarea, 
+.dark select {
+  background-color: #1a1a1a;
+  border-color: #333333;
 }

@@ -44,74 +44,97 @@ export default async function handler(req, res) {
       }
       
       const order = body.order;
-      
-      // Determine return status
+
+      // ---
+      // DETERMINE RETURN STATUS
+      // ---
+
+      // Convert tags string into an array for easier matching
+      const tagsArray = order.tags
+        ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
+        : [];
+
       let status = 'pending';
+
+      // If fully refunded
       if (order.financial_status === 'refunded') {
         status = 'completed';
-      } else if (order.tags?.includes('approved') || order.tags?.includes('return-approved')) {
+      }
+      // Otherwise, see if the tags contain our "approved", "flagged", "rejected" markers
+      else if (tagsArray.includes('return-approved') || tagsArray.includes('approved')) {
         status = 'approved';
-      } else if (order.tags?.includes('flagged') || order.tags?.includes('return-flagged')) {
+      } else if (tagsArray.includes('return-flagged') || tagsArray.includes('flagged')) {
         status = 'flagged';
-      } else if (order.tags?.includes('rejected') || order.tags?.includes('return-rejected')) {
+      } else if (tagsArray.includes('return-rejected') || tagsArray.includes('rejected')) {
         status = 'rejected';
       }
-      
-      // Build return items
+      // else keep 'pending' by default
+
+      // ---
+      // BUILD RETURN ITEMS
+      // ---
+      // We will show ALL line items, but also note if they've been partially or fully refunded.
       const returnItems = [];
-      
-      // If there are refunds, use those items
+
+      // Make an easy map of refund details: how many were refunded and any reason/note
+      let refundMap = {}; 
       if (order.refunds && order.refunds.length > 0) {
-        order.refunds.forEach(refund => {
-          refund.refund_line_items.forEach(refundItem => {
-            const originalItem = order.line_items.find(
-              item => item.id === refundItem.line_item_id
-            );
-            
-            if (originalItem) {
-              returnItems.push({
-                id: originalItem.id,
-                title: originalItem.name || originalItem.title,
-                variant_title: originalItem.variant_title,
-                quantity: refundItem.quantity,
-                price: originalItem.price,
-                return_type: 'return', // Default to return
-                reason: refundItem.reason || refundItem.note || 'No reason provided',
-                imageUrl: originalItem.image?.src,
-                product_id: originalItem.product_id
-              });
+        for (const refund of order.refunds) {
+          for (const refundItem of refund.refund_line_items) {
+            const lineItemId = refundItem.line_item_id;
+            // If we haven't seen this line item yet, initialize
+            if (!refundMap[lineItemId]) {
+              refundMap[lineItemId] = {
+                refunded_quantity: 0,
+                reason: []
+              };
             }
-          });
-        });
-      } 
-      // If no refunds or items not found, use the original line items
-      else if (returnItems.length === 0) {
-        order.line_items.forEach(item => {
-          returnItems.push({
-            id: item.id,
-            title: item.name || item.title,
-            variant_title: item.variant_title,
-            quantity: item.quantity,
-            price: item.price,
-            return_type: 'return', // Default to return
-            reason: 'Unknown reason',
-            imageUrl: item.image?.src,
-            product_id: item.product_id
-          });
+            // Accumulate quantity
+            refundMap[lineItemId].refunded_quantity += refundItem.quantity;
+
+            // Capture reason (or note). If multiple refunds, push them
+            const itemReason = refundItem.reason || refundItem.note;
+            if (itemReason) {
+              refundMap[lineItemId].reason.push(itemReason);
+            }
+          }
+        }
+      }
+
+      // Now loop all line_items to build the final items array
+      for (const item of order.line_items) {
+        // Check if there's a refunded record for this item
+        const refundInfo = refundMap[item.id] || { refunded_quantity: 0, reason: [] };
+
+        returnItems.push({
+          id: item.id,
+          title: item.name || item.title,
+          variant_title: item.variant_title,
+          quantity: item.quantity, // total purchased
+          refunded_quantity: refundInfo.refunded_quantity, // how many have been refunded
+          price: item.price,
+          return_type: 'return', // you can adapt if you track exchanges differently
+          reason: refundInfo.reason.join('; ') || 'No reason provided',
+          imageUrl: item.image?.src,
+          product_id: item.product_id
         });
       }
-      
-      // Create history entries based on events in the order
+
+      // ---
+      // BUILD HISTORY
+      // ---
       const history = [
         {
           type: 'created',
           title: 'Return requested',
           timestamp: order.created_at,
-          user: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Customer'
+          user: order.customer
+            ? `${order.customer.first_name} ${order.customer.last_name}`
+            : 'Customer'
         }
       ];
-      
-      // Add refund events to history
+
+      // If we have refunds, add them to history
       if (order.refunds && order.refunds.length > 0) {
         order.refunds.forEach(refund => {
           history.push({
@@ -124,18 +147,28 @@ export default async function handler(req, res) {
         });
       }
       
-      // Calculate total refund
-      const totalRefund = order.refunds ?
-        order.refunds.reduce((total, refund) => 
-          total + parseFloat(refund.transactions?.[0]?.amount || 0), 0) : 0;
-      
-      // Assemble the return details object
+      // ---
+      // CALCULATE TOTAL REFUND
+      // ---
+      const totalRefund = order.refunds
+        ? order.refunds.reduce(
+            (total, refund) =>
+              total + parseFloat(refund.transactions?.[0]?.amount || 0),
+            0
+          )
+        : 0;
+
+      // ---
+      // ASSEMBLE THE RETURN DETAILS OBJECT
+      // ---
       const returnData = {
         id: id,
         order_id: `#${order.order_number}`,
         order_number: order.order_number,
         customer: {
-          name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+          name: order.customer
+            ? `${order.customer.first_name} ${order.customer.last_name}`
+            : 'Guest Customer',
           email: order.email || 'No email provided',
           phone: order.customer?.phone
         },
@@ -144,7 +177,7 @@ export default async function handler(req, res) {
         status: status,
         items: returnItems,
         shipping_address: order.shipping_address,
-        has_returns: !!order.refunds?.length,
+        has_returns: !!(order.refunds && order.refunds.length),
         has_exchanges: order.note?.toLowerCase().includes('exchange') || false,
         total_refund: totalRefund || parseFloat(order.total_price),
         history: history,
@@ -183,7 +216,7 @@ export default async function handler(req, res) {
       const shopifyClients = await getShopifyClientForTenant(tenantId);
       const client = shopifyClients.rest;
       
-      // First fetch the order to get existing tags
+      // Fetch the order to get existing tags
       const { body: orderData } = await client.get({
         path: `orders/${orderId}`
       });
@@ -199,14 +232,18 @@ export default async function handler(req, res) {
       let tags = (orderData.order.tags || '').split(',')
         .map(tag => tag.trim())
         .filter(tag => 
-          !['pending', 'approved', 'completed', 'rejected', 'flagged', 
-            'return-pending', 'return-approved', 'return-completed', 'return-rejected', 'return-flagged']
-            .includes(tag)
+          ![
+            'pending','approved','completed','rejected','flagged',
+            'return-pending','return-approved','return-completed','return-rejected','return-flagged'
+          ].includes(tag)
         );
       
       // Add our new status tag
       tags.push(status);
-      tags.push('Return'); // Always mark as a return
+      // Also push "Return" to mark it as a return
+      if (!tags.includes('Return')) {
+        tags.push('Return');
+      }
       
       // Combine all notes
       const combinedNotes = adminNotes 
@@ -261,7 +298,7 @@ export default async function handler(req, res) {
           }
         } catch (refundErr) {
           console.error('Error creating refund:', refundErr);
-          // Continue even if refund creation fails, this may be because it's already refunded
+          // Continue even if refund creation fails, it might already be refunded
         }
       }
       

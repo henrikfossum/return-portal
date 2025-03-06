@@ -6,12 +6,12 @@ import { motion } from 'framer-motion';
 
 // Step indicators for the return process
 const steps = [
-  { name: 'Order Lookup', description: 'Enter your order information' },
-  { name: 'Select Items', description: 'Choose items to return' },
-  { name: 'Return Reason', description: 'Tell us why you\'re returning' },
-  { name: 'Return Options', description: 'Return or exchange' },
-  { name: 'Review', description: 'Confirm your request' },
-  { name: 'Confirmation', description: 'Return complete' }
+  { name: 'Order', description: 'Enter order info' },
+  { name: 'Items', description: 'Choose return items' },
+  { name: 'Reason', description: 'Why returning' },
+  { name: 'Options', description: 'Return/exchange' },
+  { name: 'Review', description: 'Confirm request' },
+  { name: 'Done', description: 'Return complete' }
 ];
 
 export default function ReturnLayout({ 
@@ -23,13 +23,13 @@ export default function ReturnLayout({
 }) {
   const { theme } = useTenantTheme();
 
-  // Animation variants
+  // Simplified animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.3,
+        duration: 0.2,
         when: "beforeChildren",
         staggerChildren: 0.1
       }
@@ -37,54 +37,54 @@ export default function ReturnLayout({
   };
 
   const childVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3 }
+      transition: { duration: 0.2 }
     }
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="bg-white py-4 px-2 sm:px-4">
       <Head>
         <title>{title} | Return Portal</title>
         <meta name="description" content="Easy returns and exchanges" />
       </Head>
       
       <motion.div 
-        className="max-w-3xl mx-auto"
+        className="max-w-xl mx-auto"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
         {/* Header */}
-        <motion.div variants={childVariants} className="mb-8 text-center">
+        <motion.div variants={childVariants} className="mb-4 text-center">
           <h1 
-            className="text-3xl font-bold"
+            className="text-2xl font-bold"
             style={{ color: theme?.primaryColor || '#4f46e5' }}
           >
             Return Portal
           </h1>
-          <p className="mt-2 text-gray-600">
-            We make returns and exchanges simple and hassle-free
+          <p className="mt-1 text-gray-800 text-sm">
+            Simple and hassle-free returns
           </p>
         </motion.div>
         
         {/* Progress steps */}
-        <motion.div variants={childVariants} className="mb-8">
+        <motion.div variants={childVariants} className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-medium text-gray-900">
+            <h2 className="text-base font-medium text-gray-900">
               {steps[currentStep-1]?.name || 'Return Process'}
             </h2>
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
               Step {currentStep} of {steps.length}
             </span>
           </div>
           
           <div className="relative">
             {/* Progress bar background */}
-            <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+            <div className="overflow-hidden h-1.5 text-xs flex rounded bg-gray-200">
               <div 
                 style={{ 
                   width: `${(currentStep / steps.length) * 100}%`,
@@ -95,7 +95,7 @@ export default function ReturnLayout({
             </div>
             
             {/* Step indicators */}
-            <div className="flex justify-between text-xs text-gray-600 px-2 mt-2">
+            <div className="flex justify-between text-xs text-gray-800 px-1 mt-1.5">
               {steps.map((step, index) => {
                 const stepNum = index + 1;
                 let status;
@@ -104,17 +104,17 @@ export default function ReturnLayout({
                 else status = 'upcoming';
                 
                 return (
-                  <div key={step.name} className="flex flex-col items-center w-24">
+                  <div key={step.name} className="flex flex-col items-center w-16">
                     <div className={`
-                      w-6 h-6 rounded-full mb-1 flex items-center justify-center text-xs font-semibold
+                      w-5 h-5 rounded-full mb-1 flex items-center justify-center text-xs font-semibold
                       ${status === 'complete' ? 'bg-green-500 text-white' : ''}
                       ${status === 'current' ? 'border-2 border-blue-600 text-blue-600' : ''}
-                      ${status === 'upcoming' ? 'bg-gray-200 text-gray-500' : ''}
+                      ${status === 'upcoming' ? 'bg-gray-200 text-gray-700' : ''}
                     `}>
                       {status === 'complete' ? '✓' : stepNum}
                     </div>
-                    <span className={`text-xs text-center hidden sm:block
-                      ${status === 'current' ? 'font-medium text-blue-600' : 'text-gray-500'}
+                    <span className={`text-[0.7rem] text-center hidden sm:block
+                      ${status === 'current' ? 'font-medium text-blue-600' : 'text-gray-800'}
                     `}>
                       {step.name}
                     </span>
@@ -128,18 +128,18 @@ export default function ReturnLayout({
         {/* Main content */}
         <motion.div 
           variants={childVariants}
-          className="bg-white rounded-lg shadow-lg overflow-hidden"
+          className="rounded-md shadow-md overflow-hidden"
         >
           {/* Back button if needed */}
           {showBackButton && onBackClick && (
-            <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
               <button 
                 onClick={onBackClick}
-                className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+                className="flex items-center text-xs text-gray-800 hover:text-gray-900"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  className="h-4 w-4 mr-1" 
+                  className="h-3 w-3 mr-1" 
                   fill="none" 
                   viewBox="0 0 24 24" 
                   stroke="currentColor"
@@ -153,12 +153,7 @@ export default function ReturnLayout({
           
           {/* Content */}
           {children}
-        </motion.div>
-        
-        {/* Footer */}
-        <motion.div variants={childVariants} className="mt-8 text-center text-sm text-gray-500">
-          <p>Need help? <a href="#" className="text-blue-600 hover:underline">Contact customer support</a></p>
-        </motion.div>
+        </motion.div> 
       </motion.div>
     </div>
   );

@@ -23,74 +23,124 @@ export default async function handler(req, res) {
       const client = shopifyClients.rest;
       
       // Fetch orders with status "any" to include all possible returns
+      // NOTE: This only pulls the first 50 orders! If you have more orders than 50,
+      // you may need to implement pagination to fetch additional pages.
       const { body } = await client.get({
         path: 'orders',
         query: {
           status: 'any',
-          limit: 50, // Fetch more to allow for filtering
+          limit: 50, // or 250, then handle pagination to truly get them all
           financial_status: 'refunded,partially_refunded',
         }
       });
       
       const allOrders = body.orders || [];
       
-      // Process orders to find returns
-      // In a real implementation, you would use a dedicated returns API or database
+      // Process orders to find returns.
+      // We'll parse tags into arrays, then match any "return" tag or partial/full refund, etc.
       const returnsData = allOrders
-        .filter(order => 
-          order.refunds?.length > 0 || // Has refunds
-          order.financial_status === 'refunded' || // Full refund
-          order.financial_status === 'partially_refunded' || // Partial refund
-          order.tags?.includes('Return') || // Tagged as return
-          order.note?.toLowerCase().includes('return') // Return mentioned in notes
-        )
+        .filter(order => {
+          const tagsArray = order.tags
+            ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
+            : [];
+
+          return (
+            // Has at least one refund
+            (order.refunds && order.refunds.length > 0) ||
+            // Financial status indicates a refund
+            ['refunded', 'partially_refunded'].includes(order.financial_status) ||
+            // Has any "return" or stage-specific tag
+            tagsArray.some(t =>
+              [
+                'return',
+                'return-pending',
+                'return-approved',
+                'return-flagged',
+                'return-rejected',
+                // (Optional) If you also want these short tags recognized
+                'approved',
+                'flagged',
+                'rejected'
+              ].includes(t)
+            ) ||
+            // Mentioned "return" in the note
+            order.note?.toLowerCase().includes('return')
+          );
+        })
         .map(order => {
-          // Get return items from refunds
-          const returnItems = order.refunds ? 
-            order.refunds.reduce((total, refund) => 
-              total + refund.refund_line_items.length, 0) : 0;
-          
+          const tagsArray = order.tags
+            ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
+            : [];
+
+          // Count refunded line items if any
+          const returnItems = order.refunds 
+            ? order.refunds.reduce(
+                (total, refund) => total + refund.refund_line_items.length,
+                0
+              )
+            : 0;
+
           // Calculate total refund amount
-          const totalRefund = order.refunds ?
-            order.refunds.reduce((total, refund) => 
-              total + parseFloat(refund.transactions?.[0]?.amount || 0), 0) : 0;
-          
-          // Determine status based on refund state and tags
+          const totalRefund = order.refunds
+            ? order.refunds.reduce(
+                (total, refund) =>
+                  total + parseFloat(refund.transactions?.[0]?.amount || 0),
+                0
+              )
+            : 0;
+
+          // Determine status based on tags and financial status
           let returnStatus = 'pending';
-          
+
+          // If fully refunded
           if (order.financial_status === 'refunded') {
             returnStatus = 'completed';
-          } else if (order.tags?.includes('approved') || order.tags?.includes('return-approved')) {
-            returnStatus = 'approved';
-          } else if (order.tags?.includes('flagged') || order.tags?.includes('return-flagged')) {
-            returnStatus = 'flagged';
-          } else if (order.tags?.includes('rejected') || order.tags?.includes('return-rejected')) {
-            returnStatus = 'rejected';
           }
-            
+          // If partially refunded, you can decide if that is "completed" or keep it as "pending"
+          else if (order.financial_status === 'partially_refunded') {
+            // Some teams might mark partial refunds as "completed" if they're final,
+            // or keep them at 'pending/approved' if there's more to do.
+            // Adjust as you prefer. We'll leave it at "pending" unless tags override it.
+          }
+
+          // If there's a tag that indicates a specific stage
+          if (tagsArray.includes('return-approved') || tagsArray.includes('approved')) {
+            returnStatus = 'approved';
+          } else if (tagsArray.includes('return-flagged') || tagsArray.includes('flagged')) {
+            returnStatus = 'flagged';
+          } else if (tagsArray.includes('return-rejected') || tagsArray.includes('rejected')) {
+            returnStatus = 'rejected';
+          } else if (tagsArray.includes('return-pending')) {
+            returnStatus = 'pending';
+          }
+
           return {
             id: `return-${order.id}`,
             order_id: `#${order.order_number}`,
             order_number: order.order_number,
-            customer: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+            customer: order.customer
+              ? `${order.customer.first_name} ${order.customer.last_name}`
+              : 'Guest Customer',
             email: order.email || 'No email provided',
             date: order.processed_at || order.created_at,
             status: returnStatus,
+            // If no refunded line items, fallback to total line_items count
             items: returnItems || order.line_items?.length || 0,
+            // If no partial refunds, fallback to total price
             total: totalRefund || parseFloat(order.total_price),
             original_order: order
           };
         });
       
-      // Apply filters
+      // Apply filters (status, date range, search)
       let filteredReturns = returnsData;
-      
-      // Filter by status
+
+      // 1) Filter by status
       if (status && status !== 'all') {
         filteredReturns = filteredReturns.filter(r => r.status === status);
       }
-      
-      // Filter by date range
+
+      // 2) Filter by date range
       if (dateRange && dateRange !== 'all') {
         const now = new Date();
         let cutoffDate = new Date();
@@ -110,7 +160,7 @@ export default async function handler(req, res) {
         );
       }
       
-      // Filter by search term
+      // 3) Filter by search term (order ID, customer name, or email)
       if (search) {
         const searchTerm = search.toLowerCase();
         filteredReturns = filteredReturns.filter(r => 
@@ -140,6 +190,7 @@ export default async function handler(req, res) {
           pendingReturns: returnsData.filter(r => r.status === 'pending').length,
           completedReturns: returnsData.filter(r => r.status === 'completed').length,
           flaggedReturns: returnsData.filter(r => r.status === 'flagged').length
+          // You could add 'approvedReturns' or 'rejectedReturns' similarly if you want
         }
       });
       

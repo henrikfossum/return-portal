@@ -59,66 +59,20 @@ export default function ExchangeOptions({
         const data = await response.json();
         setProductData(data);
         
-        console.log("Product variants data:", data);
-        
         // Process variants
         if (data.variants) {
           setVariants(data.variants);
         }
         
-        // Process options
-        if (data.options) {
-          // Get option types
-          const types = data.options.map(option => ({
-            id: option.id,
-            name: option.name,
-            position: option.position
-          }));
-          setOptionTypes(types);
-          
-          // Find size and color options (common patterns)
-          const sizeOptionNames = ['size', 'sizes', 'length', 'width', 'dimension'];
-          const colorOptionNames = ['color', 'colours', 'colors', 'shade', 'pattern'];
-          
-          // Extract size options
-          const sizeOption = data.options.find(option => 
-            sizeOptionNames.includes(option.name.toLowerCase())
-          );
-          
-          if (sizeOption) {
-            const inStockSizes = data.inStockOptions?.[sizeOption.name.toLowerCase()] || [];
-            setSizeOptions(inStockSizes);
-          }
-          
-          // Extract color options
-          const colorOption = data.options.find(option => 
-            colorOptionNames.includes(option.name.toLowerCase())
-          );
-          
-          if (colorOption) {
-            const inStockColors = data.inStockOptions?.[colorOption.name.toLowerCase()] || [];
-            setColorOptions(inStockColors);
-          }
-          
-          // Handle other option types
-          const otherOptionTypes = data.options.filter(option => 
-            !sizeOptionNames.includes(option.name.toLowerCase()) && 
-            !colorOptionNames.includes(option.name.toLowerCase())
-          );
-          
-          if (otherOptionTypes.length > 0) {
-            const otherOpts = {};
-            otherOptionTypes.forEach(option => {
-              const optionName = option.name.toLowerCase();
-              otherOpts[optionName] = {
-                id: option.id,
-                name: option.name,
-                values: data.inStockOptions?.[optionName] || []
-              };
-            });
-            setOtherOptions(otherOpts);
-          }
-        }
+        // Extract size options directly from variants
+        const sizeOptions = data.variants
+          .filter(variant => variant.inventory > 0)
+          .map(variant => variant.option1)
+          .filter((value, index, self) => self.indexOf(value) === index);
+  
+        setSizeOptions(sizeOptions);
+        
+        // Rest of your existing logic...
       } catch (err) {
         console.error('Error fetching product variants:', err);
         setError('Unable to load product options: ' + err.message);
@@ -128,7 +82,7 @@ export default function ExchangeOptions({
     }
     
     fetchProductVariants();
-  }, [product]);
+  }, [product]); // Only depend on product
 
   // Parse original variant options
   useEffect(() => {
@@ -165,41 +119,44 @@ export default function ExchangeOptions({
 
   // Find the matching variant when selections change
   useEffect(() => {
-    if (!variants.length || !selectedSize || !selectedColor) return;
+    if (!variants.length || !selectedSize) return;
     
-    // Construct the full variant title based on selections
-    let variantTitle = [selectedSize, selectedColor];
+    // Find variants more flexibly
+    const matchingVariants = variants.filter(variant => 
+      variant.option1 === selectedSize && 
+      (selectedColor ? variant.option2 === selectedColor : true)
+    );
     
-    // Add other options in the correct order
-    Object.keys(selectedOtherOptions).forEach(key => {
-      if (selectedOtherOptions[key]) {
-        variantTitle.push(selectedOtherOptions[key]);
+    // Find the first available variant
+    const availableVariant = matchingVariants.find(v => v.isAvailable) || 
+                              matchingVariants[0];
+    
+    // Only update if the variant is different
+    if (availableVariant !== selectedVariant) {
+      setSelectedVariant(availableVariant);
+      
+      // Update exchange details for the parent component
+      if (onExchangeDetailsChange) {
+        onExchangeDetailsChange({
+          variantId: availableVariant?.id || product.variant_id,
+          originalSize: originalOptions.size,
+          newSize: selectedSize,
+          originalColor: originalOptions.color,
+          newColor: selectedColor,
+          isInStock: availableVariant?.isAvailable || false,
+          inventory: availableVariant?.inventory || 0
+        });
       }
-    });
-    
-    variantTitle = variantTitle.join(' / ');
-    
-    // Find the matching variant
-    const matchingVariant = variants.find(v => v.title === variantTitle);
-    
-    console.log("Looking for variant:", variantTitle);
-    console.log("Found matching variant:", matchingVariant);
-    
-    setSelectedVariant(matchingVariant);
-    
-    // Update exchange details for the parent component
-    if (onExchangeDetailsChange) {
-      onExchangeDetailsChange({
-        variantId: matchingVariant?.id || product.variant_id,
-        originalSize: originalOptions.size,
-        newSize: selectedSize,
-        originalColor: originalOptions.color,
-        newColor: selectedColor,
-        isInStock: matchingVariant?.isAvailable || false,
-        inventory: matchingVariant?.inventory || 0
-      });
     }
-  }, [variants, selectedSize, selectedColor, selectedOtherOptions, originalOptions, product, onExchangeDetailsChange]);
+  }, [
+    variants, 
+    selectedSize, 
+    selectedColor, 
+    originalOptions, 
+    product, 
+    onExchangeDetailsChange,
+    selectedVariant
+  ]);
 
   // Loading state
   if (loading) {

@@ -1,5 +1,7 @@
 // src/pages/api/returns/batch-process.js
 import { processReturn, processExchange } from '@/lib/shopify/returns';
+import { getShopifyClientForTenant } from '@/lib/shopify/client';
+import { analyzeReturnFraud, getSettings, flagFraudulentReturn } from '@/lib/fraud/detection';
 
 // Helper function to validate items
 function validateItems(items) {
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { items } = req.body;
+  const { items, orderDetails } = req.body;
   const tenantId = req.headers['x-tenant-id'] || 'default';
   
   // Validate items
@@ -55,6 +57,58 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get tenant settings for fraud prevention
+    const settings = await getSettings(tenantId);
+    
+    // Get Shopify client for this tenant
+    const shopifyClients = await getShopifyClientForTenant(tenantId);
+    const client = shopifyClients.rest;
+    
+    // First, analyze the return for potential fraud
+    const firstItem = items[0];
+    const orderId = firstItem.orderId;
+    
+    // Fetch the full order to analyze
+    let order;
+    try {
+      const { body } = await client.get({
+        path: `orders/${orderId}`
+      });
+      
+      if (body?.order) {
+        order = body.order;
+      }
+    } catch (error) {
+      console.error(`Error fetching order ${orderId}:`, error);
+    }
+    
+    // If we have the order and fraud prevention is enabled, check for fraud
+    let fraudDetection = { isHighRisk: false, riskFactors: [] };
+    
+    if (order && settings.fraudPrevention.enabled) {
+      // Add the return items to the order for analysis
+      order.return_items = items.map(item => ({
+        id: item.id,
+        quantity: item.quantity || 1,
+        returnOption: item.returnOption
+      }));
+      
+      // Analyze for fraud
+      fraudDetection = await analyzeReturnFraud(order, settings, client);
+      
+      // If high risk, flag the order
+      if (fraudDetection.isHighRisk) {
+        await flagFraudulentReturn(order, fraudDetection.riskFactors, client);
+        
+        // If auto-approve is disabled for high-risk returns, notify the admin
+        if (!settings.autoApproveReturns) {
+          // In a real app, this would send an email or notification
+          console.log(`High-risk return detected for order ${orderId}. Manual review needed.`);
+        }
+      }
+    }
+    
+    // Process the returns/exchanges (proceed even if high risk, but flagged for review)
     const results = [];
     const processedIds = new Set(); // Track processed items to prevent duplicates
     
@@ -128,19 +182,30 @@ export default async function handler(req, res) {
     // Check if any operations failed
     const hasFailures = results.some(result => !result.success);
     
+    // Return response with fraud detection info
     if (hasFailures) {
       // Return 207 Multi-Status for partial success
       return res.status(207).json({
         status: 'partialSuccess',
         message: 'Some items could not be processed.',
-        results
+        results,
+        fraudDetection: {
+          isHighRisk: fraudDetection.isHighRisk,
+          riskFactors: fraudDetection.riskFactors,
+          riskScore: fraudDetection.riskScore || 0
+        }
       });
     }
 
     return res.status(200).json({
       status: 'success',
       message: 'All items processed successfully',
-      results
+      results,
+      fraudDetection: {
+        isHighRisk: fraudDetection.isHighRisk,
+        riskFactors: fraudDetection.riskFactors,
+        riskScore: fraudDetection.riskScore || 0
+      }
     });
 
   } catch (error) {

@@ -137,36 +137,6 @@ export default function Home() {
             </div>
           </form>
           
-          {/* Extra info section */}
-          <motion.div 
-            custom={3}
-            initial="hidden"
-            animate="visible"
-            variants={formVariants}
-            className="mt-10 bg-gray-50 p-4 rounded-lg border border-gray-200"
-          >
-            <h3 className="text-sm font-medium text-gray-700 mb-3">What to Expect</h3>
-            <div className="space-y-3">
-              <div className="flex">
-                <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="ml-2 text-sm text-gray-600">
-                  <span className="font-medium">Fast & Easy:</span> Our return process typically takes less than 2 minutes to complete.
-                </p>
-              </div>
-              <div className="flex">
-                <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="ml-2 text-sm text-gray-600">
-                  <span className="font-medium">Free Returns:</span> We cover return shipping costs for all standard returns.
-                </p>
-              </div>
-              <div className="flex">
-                <ShieldCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="ml-2 text-sm text-gray-600">
-                  <span className="font-medium">Quick Refunds:</span> Refunds are typically processed within 3-5 business days.
-                </p>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </div>
     </ReturnLayout>

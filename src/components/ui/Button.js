@@ -1,15 +1,7 @@
 // src/components/ui/Button.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useTenantTheme } from '@/lib/tenant/hooks';
-
-const variants = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-  secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-900',
-  success: 'bg-green-600 hover:bg-green-700 text-white',
-  danger: 'bg-red-600 hover:bg-red-700 text-white',
-  outline: 'bg-transparent border border-current hover:bg-gray-50 text-blue-600',
-};
+import { useTheme } from '@/lib/context/ThemeContext';
 
 const sizes = {
   xs: 'px-2 py-1 text-xs',
@@ -32,17 +24,83 @@ export default function Button({
   onClick,
   ...props
 }) {
-  const { theme } = useTenantTheme();
+  const { theme } = useTheme();
   const isDisabled = isLoading || disabled;
   
-  // For primary buttons, we'll use inline styling for the background.
-  // For all other variants, we'll rely on the static Tailwind classes.
-  const getVariantClass = () => {
-    if (variant === 'primary') {
-      // Only set text and hover classes; background will be set inline.
-      return 'text-white hover:opacity-90';
+  // Get the appropriate styles based on variant and theme
+  const getStyles = () => {
+    // Base styles that apply to all variants
+    const baseStyles = {
+      borderRadius: '0.375rem', // rounded-md
+      fontWeight: '500', // font-medium
+      transition: 'all 0.2s',
+    };
+    
+    // Variant-specific styles
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyles,
+          backgroundColor: theme?.primaryColor || 'var(--color-primary, #4f46e5)',
+          color: '#ffffff',
+          border: 'none',
+          ':hover': {
+            backgroundColor: theme?.primaryColor ? adjustColor(theme.primaryColor, -15) : 'var(--color-primary-dark, #3c35b5)',
+            opacity: 0.9,
+          },
+        };
+      case 'secondary':
+        return {
+          ...baseStyles,
+          backgroundColor: theme?.secondaryColor || 'var(--color-secondary, #f59e0b)',
+          color: '#ffffff',
+          border: 'none',
+          ':hover': {
+            backgroundColor: theme?.secondaryColor ? adjustColor(theme.secondaryColor, -15) : 'var(--color-secondary-dark, #d97706)',
+            opacity: 0.9,
+          },
+        };
+      case 'success':
+        return {
+          ...baseStyles,
+          backgroundColor: theme?.successColor || 'var(--color-success, #10b981)',
+          color: '#ffffff',
+          border: 'none',
+          ':hover': {
+            backgroundColor: theme?.successColor ? adjustColor(theme.successColor, -15) : 'var(--color-success-dark, #059669)',
+            opacity: 0.9,
+          },
+        };
+      case 'danger':
+        return {
+          ...baseStyles,
+          backgroundColor: theme?.dangerColor || 'var(--color-danger, #ef4444)',
+          color: '#ffffff',
+          border: 'none',
+          ':hover': {
+            backgroundColor: theme?.dangerColor ? adjustColor(theme.dangerColor, -15) : 'var(--color-danger-dark, #dc2626)',
+            opacity: 0.9,
+          },
+        };
+      case 'outline':
+        return {
+          ...baseStyles,
+          backgroundColor: 'transparent',
+          color: theme?.primaryColor || 'var(--color-primary, #4f46e5)',
+          border: `1px solid ${theme?.primaryColor || 'var(--color-primary, #4f46e5)'}`,
+          ':hover': {
+            backgroundColor: 'rgba(79, 70, 229, 0.05)',
+          },
+        };
+      default:
+        return baseStyles;
     }
-    return variants[variant] || variants.primary;
+  };
+
+  // Helper function to darken/lighten colors
+  const adjustColor = (color, amount) => {
+    // Simple implementation; in a real app you would use a proper color library
+    return color; // For now, just return the original color
   };
 
   const ButtonComponent = animate ? motion.button : 'button';
@@ -53,19 +111,14 @@ export default function Button({
       }
     : {};
 
-  // Apply the dynamic background only for primary variant using inline style.
-  const inlineStyle =
-    theme && variant === 'primary'
-      ? { backgroundColor: theme.primaryColor }
-      : {};
-
+  const buttonStyles = getStyles();
+  
   return (
     <ButtonComponent
       disabled={isDisabled}
       onClick={isDisabled ? undefined : onClick}
-      style={inlineStyle}
+      style={buttonStyles}
       className={`
-        ${getVariantClass()}
         ${sizes[size]}
         ${fullWidth ? 'w-full' : ''}
         rounded-lg font-medium transition-colors

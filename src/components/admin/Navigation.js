@@ -4,15 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { 
   LayoutDashboard, 
-  Package, // Use Package instead of PackageReturn
+  Package,
   BarChart3, 
-  Settings 
+  Settings,
+  Palette
 } from 'lucide-react';
-
+import { useTheme } from '@/lib/context/ThemeContext';
 
 export default function Navigation() {
   const router = useRouter();
   const [currentPath, setCurrentPath] = useState('');
+  const { theme } = useTheme();
 
   useEffect(() => {
     setCurrentPath(router.pathname);
@@ -22,6 +24,11 @@ export default function Navigation() {
     return currentPath === path || currentPath.startsWith(`${path}/`);
   };
   
+  // Get theme colors or fallback values
+  const primaryColor = theme?.primaryColor || '#4f46e5';
+  const textColor = theme?.textColor || '#111827';
+  const borderColor = theme?.borderColor || '#e5e7eb';
+  
   const navItems = [
     { 
       href: "/admin", 
@@ -30,12 +37,13 @@ export default function Navigation() {
       isActive: isActive('/admin') && 
         !isActive('/admin/returns') && 
         !isActive('/admin/analytics') && 
-        !isActive('/admin/settings')
+        !isActive('/admin/settings') &&
+        !isActive('/admin/theme-customization')
     },
     { 
       href: "/admin/returns", 
       label: "Returns", 
-      icon: Package, // Changed from PackageReturn
+      icon: Package,
       isActive: isActive('/admin/returns')
     },
     { 
@@ -43,6 +51,12 @@ export default function Navigation() {
       label: "Analytics", 
       icon: BarChart3,
       isActive: isActive('/admin/analytics')
+    },
+    { 
+      href: "/admin/theme-customization", 
+      label: "Theme", 
+      icon: Palette,
+      isActive: isActive('/admin/theme-customization')
     },
     { 
       href: "/admin/settings", 
@@ -53,7 +67,7 @@ export default function Navigation() {
   ];
   
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-16 z-30">
+    <nav className="bg-white border-b sticky top-16 z-30" style={{ borderColor }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex space-x-1">
           {navItems.map((item) => {
@@ -65,16 +79,18 @@ export default function Navigation() {
                 className={`
                   flex items-center space-x-2 px-3 py-3 text-sm font-medium 
                   transition-all duration-200 group
-                  ${item.isActive 
-                    ? 'text-blue-600 border-b-2 border-blue-600' 
-                    : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'}
+                  ${item.isActive ? 'border-b-2' : 'hover:border-b-2 hover:border-gray-300'}
                 `}
+                style={{
+                  color: item.isActive ? primaryColor : (theme?.secondaryTextColor || '#6b7280'),
+                  borderColor: item.isActive ? primaryColor : 'transparent'
+                }}
               >
                 <IconComponent 
-                  className={`w-5 h-5 
-                    ${item.isActive 
-                      ? 'text-blue-600' 
-                      : 'text-gray-400 group-hover:text-gray-600'}`} 
+                  className="w-5 h-5" 
+                  style={{ 
+                    color: item.isActive ? primaryColor : (theme?.secondaryTextColor || '#6b7280') 
+                  }}
                 />
                 <span className="hidden sm:inline">{item.label}</span>
               </Link>

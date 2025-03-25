@@ -5,10 +5,15 @@ import Head from 'next/head';
 import '@/styles/globals.css';
 import { ReturnProvider } from '@/lib/context/ReturnContext';
 import { AdminProvider } from '@/lib/context/AdminContext';
+import { ThemeProvider } from '@/lib/context/ThemeContext';
+import { LocaleProvider } from '@/lib/i18n';
 
 function ProgressTracker({ Component, pageProps }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  
+  // Extract tenant ID from query params or use default
+  const tenantId = router.query.tenantId || 'default';
   
   // Update current step based on route
   useEffect(() => {
@@ -30,7 +35,7 @@ function ProgressTracker({ Component, pageProps }) {
 
   // Don't show progress for admin routes
   if (router.pathname.startsWith('/admin')) {
-    return <Component {...pageProps} />;
+    return <Component {...pageProps} tenantId={tenantId} />;
   }
 
   return (
@@ -41,7 +46,7 @@ function ProgressTracker({ Component, pageProps }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       
-      <Component {...pageProps} currentStep={step} />
+      <Component {...pageProps} currentStep={step} tenantId={tenantId} />
     </>
   );
 }
@@ -49,19 +54,34 @@ function ProgressTracker({ Component, pageProps }) {
 export default function App(props) {
   const router = useRouter();
   
+  // Extract tenant ID from query params or use default
+  const tenantId = router.query.tenantId || 'default';
+  
   // Determine if this is an admin route
   const isAdminRoute = router.pathname.startsWith('/admin');
 
+  // Set up providers based on the route type
+  const withProviders = (children) => {
+    // Always wrap with theme and locale providers
+    return (
+      <ThemeProvider tenantId={tenantId}>
+        <LocaleProvider tenantId={tenantId}>
+          {children}
+        </LocaleProvider>
+      </ThemeProvider>
+    );
+  };
+
   // Wrap with appropriate providers based on route
   if (isAdminRoute) {
-    return (
+    return withProviders(
       <AdminProvider>
         <ProgressTracker {...props} />
       </AdminProvider>
     );
   }
 
-  return (
+  return withProviders(
     <ReturnProvider>
       <ProgressTracker {...props} />
     </ReturnProvider>

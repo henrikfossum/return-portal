@@ -1,0 +1,261 @@
+// src/lib/context/ThemeContext.js
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getTenantTheme } from '../tenant/service';
+
+// Create context
+const ThemeContext = createContext();
+
+// Custom hook to use theme context
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}
+
+/**
+ * Theme Provider Component
+ */
+export function ThemeProvider({ children, tenantId = 'default' }) {
+  // Theme state
+  const [theme, setTheme] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('light'); // 'light' or 'dark'
+  
+  // Load theme when component mounts or tenantId changes
+  useEffect(() => {
+    loadTheme();
+  }, [tenantId]);
+
+  // Function to load theme that can be called directly
+  const loadTheme = async () => {
+    try {
+      setLoading(true);
+      const themeConfig = await getTenantTheme(tenantId);
+      
+      if (themeConfig) {
+        setTheme(themeConfig);
+        
+        // Apply theme to DOM
+        applyThemeToDom(themeConfig);
+        
+        // Load custom fonts if needed
+        if (themeConfig.fontFamily) {
+          loadCustomFont(themeConfig.fontFamily);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading theme:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle between light and dark mode
+  const toggleMode = useCallback(() => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    
+    // Toggle the 'dark' class on the document
+    if (newMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Persist preference
+    localStorage.setItem('colorMode', newMode);
+  }, [mode]);
+  
+  // Check for saved color mode preference when component mounts
+  useEffect(() => {
+    const savedMode = localStorage.getItem('colorMode') || 
+                     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    
+    if (savedMode === 'dark') {
+      setMode('dark');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  // Update theme settings and apply changes
+  const updateTheme = async (newThemeSettings) => {
+    try {
+      setLoading(true);
+      
+      // Merge with current theme
+      const updatedTheme = {
+        ...theme,
+        ...newThemeSettings
+      };
+      
+      // Update state
+      setTheme(updatedTheme);
+      
+      // Apply to DOM
+      applyThemeToDom(updatedTheme);
+      
+      // Load fonts if needed
+      if (newThemeSettings.fontFamily && 
+          newThemeSettings.fontFamily !== theme?.fontFamily) {
+        loadCustomFont(newThemeSettings.fontFamily);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating theme:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Apply theme to DOM by setting CSS variables
+  const applyThemeToDom = (themeConfig) => {
+    if (!themeConfig || typeof document === 'undefined') return;
+    
+    // Primary color and shades
+    setCssVar('--theme-primary-50', lightenColor(themeConfig.primaryColor, 0.9) || '#e6f2ff');
+    setCssVar('--theme-primary-100', lightenColor(themeConfig.primaryColor, 0.8) || '#b3daff');
+    setCssVar('--theme-primary-200', lightenColor(themeConfig.primaryColor, 0.6) || '#80c2ff');
+    setCssVar('--theme-primary-300', lightenColor(themeConfig.primaryColor, 0.4) || '#4da9ff');
+    setCssVar('--theme-primary-400', lightenColor(themeConfig.primaryColor, 0.2) || '#1a91ff');
+    setCssVar('--theme-primary-500', themeConfig.primaryColor || '#0077e6');
+    setCssVar('--theme-primary-600', darkenColor(themeConfig.primaryColor, 0.2) || '#0060b8');
+    setCssVar('--theme-primary-700', darkenColor(themeConfig.primaryColor, 0.4) || '#004a8a');
+    setCssVar('--theme-primary-800', darkenColor(themeConfig.primaryColor, 0.6) || '#00335c');
+    setCssVar('--theme-primary-900', darkenColor(themeConfig.primaryColor, 0.8) || '#001d33');
+    
+    // Secondary color (might not have shades defined)
+    setCssVar('--theme-secondary-500', themeConfig.secondaryColor || '#64748b');
+    setCssVar('--theme-secondary-200', lightenColor(themeConfig.secondaryColor, 0.6) || '#e2e8f0');
+    setCssVar('--theme-secondary-700', darkenColor(themeConfig.secondaryColor, 0.4) || '#334155');
+    
+    // Other theme colors
+    setCssVar('--theme-accent-500', themeConfig.accentColor || '#10b981');
+    setCssVar('--theme-success-500', themeConfig.successColor || '#00b347');
+    setCssVar('--theme-warning-500', themeConfig.warningColor || '#f59e0b');
+    setCssVar('--theme-danger-500', themeConfig.dangerColor || '#e60000');
+    
+    // Base UI colors
+    setCssVar('--theme-background', themeConfig.backgroundColor || '#ffffff');
+    setCssVar('--theme-surface', themeConfig.backgroundColor || '#ffffff');
+    setCssVar('--theme-card', '#ffffff');
+    setCssVar('--theme-border', themeConfig.borderColor || '#e5e7eb');
+    
+    // Text colors
+    setCssVar('--theme-text', themeConfig.textColor || '#171717');
+    setCssVar('--theme-text-light', themeConfig.secondaryTextColor || '#6b7280');
+    setCssVar('--theme-text-inverse', '#ffffff');
+    
+    // Typography
+    setCssVar('--theme-font-family', themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
+    setCssVar('--theme-font-family-heading', themeConfig.headingFontFamily || themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
+    setCssVar('--theme-font-size-base', themeConfig.fontSize || '16px');
+    
+    // Legacy variables for compatibility
+    setCssVar('--background', themeConfig.backgroundColor || '#ffffff');
+    setCssVar('--foreground', themeConfig.textColor || '#171717');
+    setCssVar('--input-text', themeConfig.textColor || '#000000');
+    setCssVar('--input-placeholder', themeConfig.secondaryTextColor || '#6b7280');
+    
+    // Apply custom CSS if provided
+    if (themeConfig.customCSS) {
+      // Check if the style element already exists
+      let styleElement = document.getElementById('custom-theme-css');
+      
+      if (!styleElement) {
+        // Create a new style element if it doesn't exist
+        styleElement = document.createElement('style');
+        styleElement.id = 'custom-theme-css';
+        document.head.appendChild(styleElement);
+      }
+      
+      // Update the content
+      styleElement.textContent = themeConfig.customCSS;
+    }
+  };
+
+  // Helper to set CSS variables
+  const setCssVar = (name, value) => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(name, value);
+    }
+  };
+  
+  // Helper to load Google Fonts
+  const loadCustomFont = (fontFamily) => {
+    // Skip if running on server
+    if (typeof document === 'undefined') return;
+    
+    // Extract font name
+    const fontName = fontFamily.split(',')[0].trim().replace(/['"]/g, '');
+    
+    // Skip system fonts
+    if (['system-ui', 'sans-serif', 'serif', 'monospace', 'Arial', 'Helvetica', 'Times New Roman'].includes(fontName)) {
+      return;
+    }
+    
+    // Check if already loaded
+    const existingLink = document.querySelector(`link[href*="${fontName}"]`);
+    if (existingLink) return;
+    
+    // Load Google Font
+    const link = document.createElement('link');
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  };
+
+  // Helper to lighten a color
+  const lightenColor = (color, factor) => {
+    if (!color || !color.startsWith('#')) return null;
+    
+    // Convert hex to RGB
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
+    
+    // Lighten
+    r = Math.min(255, Math.round(r + (255 - r) * factor));
+    g = Math.min(255, Math.round(g + (255 - g) * factor));
+    b = Math.min(255, Math.round(b + (255 - b) * factor));
+    
+    // Convert back to hex
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
+
+  // Helper to darken a color
+  const darkenColor = (color, factor) => {
+    if (!color || !color.startsWith('#')) return null;
+    
+    // Convert hex to RGB
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
+    
+    // Darken
+    r = Math.max(0, Math.round(r * (1 - factor)));
+    g = Math.max(0, Math.round(g * (1 - factor)));
+    b = Math.max(0, Math.round(b * (1 - factor)));
+    
+    // Convert back to hex
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
+
+  return (
+    <ThemeContext.Provider
+      value={{
+        theme,
+        loading,
+        mode,
+        toggleMode,
+        updateTheme,
+        loadTheme
+      }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+}

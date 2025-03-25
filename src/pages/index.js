@@ -1,6 +1,6 @@
 // src/pages/index.js
 import { useState } from 'react';
-import { Box, Search, Mail, Check, ShieldCheck } from 'lucide-react';
+import { Box, Search, Mail, XCircle } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantTheme } from '@/lib/tenant/hooks';
 import ReturnLayout from '@/components/return/ReturnLayout';
@@ -57,9 +57,10 @@ export default function Home() {
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 mb-6 bg-red-50 border border-red-100 rounded-lg"
+                className="flex items-center p-4 mb-6 bg-red-50 border border-red-200 rounded-lg"
               >
-                <p className="text-sm text-red-600">{error}</p>
+                <XCircle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
+                <p className="text-sm text-red-700 flex-grow">{error}</p>
               </motion.div>
             )}
 
@@ -136,7 +137,6 @@ export default function Home() {
               </motion.div>
             </div>
           </form>
-          
         </div>
       </div>
     </ReturnLayout>

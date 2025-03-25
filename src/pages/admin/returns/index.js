@@ -62,7 +62,7 @@ export default function ReturnsManagement() {
     ].join(','));
     
     // Combine header and rows
-    const csv = [headers, ...rows].join('\\n');
+    const csv = [headers, ...rows].join('\n');
     
     // Create download link
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -124,6 +124,7 @@ export default function ReturnsManagement() {
               <option value="approved">Approved</option>
               <option value="completed">Completed</option>
               <option value="flagged">Flagged</option>
+              <option value="rejected">Rejected</option>
             </select>
             
             <select
@@ -210,6 +211,7 @@ export default function ReturnsManagement() {
                           ${ret.status === 'approved' ? 'bg-blue-100 text-blue-800' : ''}
                           ${ret.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
                           ${ret.status === 'flagged' ? 'bg-purple-100 text-purple-800' : ''}
+                          ${ret.status === 'rejected' ? 'bg-red-100 text-red-800' : ''}
                         `}>
                           {ret.status.charAt(0).toUpperCase() + ret.status.slice(1)}
                         </span>

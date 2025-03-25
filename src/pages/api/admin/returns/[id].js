@@ -25,11 +25,26 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // Get the actual order ID from the return ID
-      const orderId = id.startsWith('return-') ? id.replace('return-', '') : id;
+      // Ensure we have a clean numeric ID for Shopify API
+      let orderId = id;
+      if (id.startsWith('return-')) {
+        orderId = id.replace('return-', '');
+      }
       
+      // Ensure the ID is numeric and doesn't contain any non-numeric characters
+      if (orderId.includes('-') || orderId.includes('/') || isNaN(Number(orderId))) {
+        console.log('Invalid order ID format:', orderId);
+        return res.status(400).json({
+          error: 'Invalid ID Format',
+          message: 'The provided ID format is not valid for Shopify API'
+        });
+      }
+
       // Get Shopify client
       const shopifyClients = await getShopifyClientForTenant(tenantId);
       const client = shopifyClients.rest;
+      
+      console.log('Fetching order with ID:', orderId);
       
       // Fetch the order
       const { body } = await client.get({
@@ -53,22 +68,61 @@ export default async function handler(req, res) {
       const tagsArray = order.tags
         ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
         : [];
+      
+      const orderNote = order.note?.toLowerCase() || '';
+      const financialStatus = order.financial_status?.toLowerCase() || '';
 
+      // Start with default status
       let status = 'pending';
-
-      // If fully refunded
-      if (order.financial_status === 'refunded') {
+      
+      // Check for status indicators in a more systematic way
+      const statusMappings = {
+        // Norwegian status terms
+        'ferdig': 'completed',
+        'sluttført': 'completed',
+        'refundert': 'completed',
+        'godkjent': 'approved',
+        'avvist': 'rejected',
+        'flagget': 'flagged',
+        'pågår': 'pending',
+        'delvis': 'approved', // "partially" typically means approved but not completed
+        
+        // English status terms
+        'completed': 'completed',
+        'approved': 'approved',
+        'rejected': 'rejected',
+        'flagged': 'flagged',
+        'pending': 'pending'
+      };
+      
+      // Check tags first, as they generally override other status indicators
+      for (const [keyword, mappedStatus] of Object.entries(statusMappings)) {
+        if (tagsArray.some(tag => tag.includes(keyword))) {
+          status = mappedStatus;
+          break;
+        }
+      }
+      
+      // Financial status can also indicate return status
+      if (financialStatus === 'refunded') {
+        status = 'completed';
+      } else if (financialStatus === 'partially_refunded') {
+        // If partially refunded and not explicitly marked otherwise, consider it approved
+        if (status === 'pending') {
+          status = 'approved';
+        }
+      }
+      
+      // Explicit return tags override other indicators
+      if (tagsArray.includes('return-approved') || tagsArray.includes('retur-godkjent')) {
+        status = 'approved';
+      } else if (tagsArray.includes('return-flagged') || tagsArray.includes('retur-flagget')) {
+        status = 'flagged';
+      } else if (tagsArray.includes('return-rejected') || tagsArray.includes('retur-avvist')) {
+        status = 'rejected';
+      } else if (tagsArray.includes('return-completed') || tagsArray.includes('retur-fullført')) {
         status = 'completed';
       }
-      // Otherwise, see if the tags contain our "approved", "flagged", "rejected" markers
-      else if (tagsArray.includes('return-approved') || tagsArray.includes('approved')) {
-        status = 'approved';
-      } else if (tagsArray.includes('return-flagged') || tagsArray.includes('flagged')) {
-        status = 'flagged';
-      } else if (tagsArray.includes('return-rejected') || tagsArray.includes('rejected')) {
-        status = 'rejected';
-      }
-      // else keep 'pending' by default
 
       // ---
       // BUILD RETURN ITEMS
@@ -157,6 +211,18 @@ export default async function handler(req, res) {
             0
           )
         : 0;
+        
+      // ---
+      // CHECK IF FULLY REFUNDED
+      // ---
+      const isFullyRefunded = financialStatus === 'refunded' || 
+        (order.refunds && 
+         order.line_items && 
+         order.line_items.every(item => 
+           order.refunds.some(refund => 
+             refund.refund_line_items.some(ri => ri.line_item_id === item.id && ri.quantity === item.quantity)
+           )
+         ));
 
       // ---
       // ASSEMBLE THE RETURN DETAILS OBJECT
@@ -182,6 +248,7 @@ export default async function handler(req, res) {
         total_refund: totalRefund || parseFloat(order.total_price),
         history: history,
         admin_notes: order.note || '',
+        is_fully_refunded: isFullyRefunded,
         original_order: order
       };
       
@@ -209,8 +276,20 @@ export default async function handler(req, res) {
         });
       }
       
-      // Get the actual order ID from the return ID
-      const orderId = id.startsWith('return-') ? id.replace('return-', '') : id;
+      // Get the actual order ID from the return ID and ensure it's a valid format
+      let orderId = id;
+      if (id.startsWith('return-')) {
+        orderId = id.replace('return-', '');
+      }
+      
+      // Ensure the ID is numeric
+      if (orderId.includes('-') || orderId.includes('/') || isNaN(Number(orderId))) {
+        console.log('Invalid order ID format for update:', orderId);
+        return res.status(400).json({
+          error: 'Invalid ID Format',
+          message: 'The provided ID format is not valid for Shopify API'
+        });
+      }
       
       // Get Shopify client
       const shopifyClients = await getShopifyClientForTenant(tenantId);
@@ -234,14 +313,16 @@ export default async function handler(req, res) {
         .filter(tag => 
           ![
             'pending','approved','completed','rejected','flagged',
-            'return-pending','return-approved','return-completed','return-rejected','return-flagged'
-          ].includes(tag)
+            'return-pending','return-approved','return-completed','return-rejected','return-flagged',
+            // Norwegian variants
+            'retur-pågår','retur-godkjent','retur-fullført','retur-avvist','retur-flagget'
+          ].includes(tag.toLowerCase())
         );
       
       // Add our new status tag
-      tags.push(status);
+      tags.push(`return-${status}`);
       // Also push "Return" to mark it as a return
-      if (!tags.includes('Return')) {
+      if (!tags.includes('Return') && !tags.includes('return') && !tags.includes('Retur') && !tags.includes('retur')) {
         tags.push('Return');
       }
       

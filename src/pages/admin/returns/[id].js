@@ -186,7 +186,7 @@ export default function ReturnDetail() {
             </>
           )}
           
-          {returnData.status === 'approved' && (
+          {returnData.status === 'approved' && !returnData.is_fully_refunded && (
             <Button
               variant="primary"
               size="sm"
@@ -373,7 +373,7 @@ export default function ReturnDetail() {
                 </div>
               )}
               
-              {returnData.status === 'approved' && (
+              {returnData.status === 'approved' && !returnData.is_fully_refunded && (
                 <Button
                   variant="primary"
                   fullWidth
@@ -411,6 +411,10 @@ export default function ReturnDetail() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Status:</span>
                 <StatusBadge status={returnData.status} />
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Fully Refunded:</span>
+                <span className="text-gray-900">{returnData.is_fully_refunded ? 'Yes' : 'No'}</span>
               </div>
               {returnData.admin_notes && (
                 <div className="pt-3 mt-3 border-t border-gray-200">

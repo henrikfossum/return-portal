@@ -149,29 +149,29 @@ export default function OrderDetails() {
       </div>
       
       {/* Fixed bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-b-lg">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-700">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-            <span className="text-sm sm:text-base text-gray-700">
-              {totalItemsSelected} {totalItemsSelected === 1 ? 'item' : 'items'} selected
-            </span>
+    <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-b-lg z-10">
+      <div className="max-w-3xl mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-700">
+            <ShoppingBag className="w-4 h-4" />
           </div>
-          
-          <Button
-            onClick={handleContinue}
-            disabled={totalItemsSelected === 0}
-            variant="primary"
-            size="lg"
-            icon={<ArrowRight className="w-5 h-5" />}
-            iconPosition="right"
-          >
-            Continue
-          </Button>
+          <span className="text-sm sm:text-base text-gray-700">
+            {totalItemsSelected} {totalItemsSelected === 1 ? 'item' : 'items'} selected
+          </span>
         </div>
+        
+        <Button
+          onClick={handleContinue}
+          disabled={totalItemsSelected === 0}
+          variant="primary"
+          size="lg"
+          icon={<ArrowRight className="w-5 h-5" />}
+          iconPosition="right"
+        >
+          Continue
+        </Button>
       </div>
+    </div>
     </ReturnLayout>
   );
 }

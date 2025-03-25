@@ -8,8 +8,10 @@ export function useAdminReturns() {
   const [stats, setStats] = useState({
     totalReturns: 0,
     pendingReturns: 0,
+    approvedReturns: 0,
     completedReturns: 0,
-    flaggedReturns: 0
+    flaggedReturns: 0,
+    rejectedReturns: 0
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,7 +45,10 @@ export function useAdminReturns() {
       if (currentFilters.search) queryParams.append('search', currentFilters.search);
       queryParams.append('page', currentFilters.page);
       queryParams.append('limit', currentFilters.limit);
+      queryParams.append('includeAll', 'true');
       
+      // IMPORTANT: Just use the base API route, without explicitly adding "index"
+      // Next.js will route properly to the index.js file
       const response = await authFetch(`/api/admin/returns?${queryParams.toString()}`);
       
       if (!response.ok) {
@@ -53,12 +58,19 @@ export function useAdminReturns() {
       
       const data = await response.json();
       
-      setReturns(data.returns);
-      setStats(data.stats);
+      setReturns(data.returns || []);
+      setStats(data.stats || {
+        totalReturns: 0,
+        pendingReturns: 0,
+        approvedReturns: 0,
+        completedReturns: 0,
+        flaggedReturns: 0,
+        rejectedReturns: 0
+      });
       setPagination({
-        total: data.total,
-        totalPages: data.totalPages,
-        current: data.page
+        total: data.total || 0,
+        totalPages: data.totalPages || 1,
+        current: data.page || 1
       });
       
       return data;

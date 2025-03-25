@@ -19,7 +19,9 @@ export default function ReturnLayout({
   currentStep = 1, 
   title = 'Return Portal',
   showBackButton = false,
-  onBackClick = null
+  onBackClick = null,
+  className = '',
+  hideProgressSteps = false
 }) {
   const { theme } = useTenantTheme();
 
@@ -46,14 +48,21 @@ export default function ReturnLayout({
   };
   
   return (
-    <div className="bg-white py-4 px-2 sm:px-4">
+    <div 
+      className={`w-full min-h-screen flex flex-col ${className}`} 
+      style={{ 
+        backgroundColor: theme?.backgroundColor || '#ffffff',
+        color: theme?.textColor || '#000000'
+      }}
+    >
       <Head>
         <title>{title} | Return Portal</title>
         <meta name="description" content="Easy returns and exchanges" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
       
       <motion.div 
-        className="max-w-xl mx-auto"
+        className="flex-grow w-full max-w-xl mx-auto px-4 py-6 sm:px-6 lg:px-8"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -64,7 +73,7 @@ export default function ReturnLayout({
             className="text-2xl font-bold"
             style={{ color: theme?.primaryColor || '#4f46e5' }}
           >
-            Return Portal
+            {title}
           </h1>
           <p className="mt-1 text-gray-800 text-sm">
             Simple and hassle-free returns
@@ -72,63 +81,65 @@ export default function ReturnLayout({
         </motion.div>
         
         {/* Progress steps */}
-        <motion.div variants={childVariants} className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-base font-medium text-gray-900">
-              {steps[currentStep-1]?.name || 'Return Process'}
-            </h2>
-            <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
-              Step {currentStep} of {steps.length}
-            </span>
-          </div>
-          
-          <div className="relative">
-            {/* Progress bar background */}
-            <div className="overflow-hidden h-1.5 text-xs flex rounded bg-gray-200">
-              <div 
-                style={{ 
-                  width: `${(currentStep / steps.length) * 100}%`,
-                  backgroundColor: theme?.primaryColor || '#4f46e5'
-                }} 
-                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500"
-              ></div>
+        {!hideProgressSteps && (
+          <motion.div variants={childVariants} className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-base font-medium text-gray-900">
+                {steps[currentStep-1]?.name || 'Return Process'}
+              </h2>
+              <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
+                Step {currentStep} of {steps.length}
+              </span>
             </div>
             
-            {/* Step indicators */}
-            <div className="flex justify-between text-xs text-gray-800 px-1 mt-1.5">
-              {steps.map((step, index) => {
-                const stepNum = index + 1;
-                let status;
-                if (stepNum < currentStep) status = 'complete';
-                else if (stepNum === currentStep) status = 'current';
-                else status = 'upcoming';
-                
-                return (
-                  <div key={step.name} className="flex flex-col items-center w-16">
-                    <div className={`
-                      w-5 h-5 rounded-full mb-1 flex items-center justify-center text-xs font-semibold
-                      ${status === 'complete' ? 'bg-green-500 text-white' : ''}
-                      ${status === 'current' ? 'border-2 border-blue-600 text-blue-600' : ''}
-                      ${status === 'upcoming' ? 'bg-gray-200 text-gray-700' : ''}
-                    `}>
-                      {status === 'complete' ? '✓' : stepNum}
+            <div className="relative">
+              {/* Progress bar background */}
+              <div className="overflow-hidden h-1.5 text-xs flex rounded bg-gray-200">
+                <div 
+                  style={{ 
+                    width: `${(currentStep / steps.length) * 100}%`,
+                    backgroundColor: theme?.primaryColor || '#4f46e5'
+                  }} 
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500"
+                ></div>
+              </div>
+              
+              {/* Step indicators */}
+              <div className="flex justify-between text-xs text-gray-800 px-1 mt-1.5">
+                {steps.map((step, index) => {
+                  const stepNum = index + 1;
+                  let status;
+                  if (stepNum < currentStep) status = 'complete';
+                  else if (stepNum === currentStep) status = 'current';
+                  else status = 'upcoming';
+                  
+                  return (
+                    <div key={step.name} className="flex flex-col items-center w-16">
+                      <div className={`
+                        w-5 h-5 rounded-full mb-1 flex items-center justify-center text-xs font-semibold
+                        ${status === 'complete' ? 'bg-green-500 text-white' : ''}
+                        ${status === 'current' ? 'border-2 border-blue-600 text-blue-600' : ''}
+                        ${status === 'upcoming' ? 'bg-gray-200 text-gray-700' : ''}
+                      `}>
+                        {status === 'complete' ? '✓' : stepNum}
+                      </div>
+                      <span className={`text-[0.7rem] text-center hidden sm:block
+                        ${status === 'current' ? 'font-medium text-blue-600' : 'text-gray-800'}
+                      `}>
+                        {step.name}
+                      </span>
                     </div>
-                    <span className={`text-[0.7rem] text-center hidden sm:block
-                      ${status === 'current' ? 'font-medium text-blue-600' : 'text-gray-800'}
-                    `}>
-                      {step.name}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
         
         {/* Main content */}
         <motion.div 
           variants={childVariants}
-          className="rounded-md shadow-md overflow-hidden"
+          className="rounded-md shadow-md overflow-hidden bg-white"
         >
           {/* Back button if needed */}
           {showBackButton && onBackClick && (

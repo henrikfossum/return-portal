@@ -1,45 +1,55 @@
-/** @type {import('tailwindcss').Config} */
-const defaultTheme = require('tailwindcss/defaultTheme')
-
+// Extended color palette suggestions
 module.exports = {
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
-  darkMode: 'class', // or 'media' if you prefer system preference
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['var(--font-geist-sans)', ...defaultTheme.fontFamily.sans],
-        mono: ['var(--font-geist-mono)', ...defaultTheme.fontFamily.mono],
-      },
       colors: {
-        // Improve contrast for dark mode
-        neutral: {
-          50:  '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-          950: '#0a0a0a'
+        // Add a more cohesive color palette
+        primary: {
+          50:  '#e6f2ff',
+          100: '#b3daff',
+          200: '#80c2ff',
+          300: '#4da9ff',
+          400: '#1a91ff',
+          500: '#0077e6', // Base primary color
+          600: '#0060b8',
+          700: '#004a8a',
+          800: '#00335c',
+          900: '#001d33'
+        },
+        success: {
+          50:  '#e6f7f0',
+          100: '#b3eacc',
+          200: '#80dea8',
+          300: '#4dd184',
+          400: '#1ac460',
+          500: '#00b347', // Base success color
+          600: '#008f39',
+          700: '#006b2b',
+          800: '#00471d',
+          900: '#00230f'
+        },
+        danger: {
+          50:  '#ffe6e6',
+          100: '#ffb3b3',
+          200: '#ff8080',
+          300: '#ff4d4d',
+          400: '#ff1a1a',
+          500: '#e60000', // Base danger color
+          600: '#b80000',
+          700: '#8a0000',
+          800: '#5c0000',
+          900: '#330000'
         }
       },
-      // Add a more robust dark mode text color palette
-      textColor: {
-        dark: {
-          primary: '#f0f0f0',   // Lighter text for better readability
-          secondary: '#a0a0a0', // Slightly muted text
-          muted: '#6b7280',     // Even more muted text
-        }
+      // Enhance shadow and transition effects
+      boxShadow: {
+        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        'medium': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      },
+      // Add smooth transition properties
+      transitionProperty: {
+        'colors': 'color, background-color, border-color, text-decoration-color, fill, stroke',
       }
-    },
-  },
-  plugins: [],
+    }
+  }
 }

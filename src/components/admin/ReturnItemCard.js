@@ -1,5 +1,5 @@
 // src/components/admin/ReturnItemCard.js
-import React from 'react';
+import React, { useState } from 'react';
 import { Package, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 
@@ -11,6 +11,9 @@ export default function ReturnItemCard({
   onReject = null,
   onFlag = null
 }) {
+  // State to track image loading errors
+  const [imageError, setImageError] = useState(false);
+
   // Helper to format money values
   const formatMoney = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -53,38 +56,51 @@ export default function ReturnItemCard({
 
   // Get image URL with fallbacks
   const getImageUrl = () => {
-    if (item.image?.src) return item.image.src;
+    // For Shopify products, check various image formats
+    if (item.image) {
+      if (typeof item.image === 'string') return item.image;
+      if (item.image.src) return item.image.src;
+      if (item.image.url) return item.image.url;
+    }
+    
+    // Direct URL properties
     if (item.imageUrl) return item.imageUrl;
+    if (item.image_url) return item.image_url;
     if (item.variant_image) return item.variant_image;
     if (item.product_image) return item.product_image;
-    return '/placeholder-product.svg';
+    
+    // Default placeholder - adjust path as needed
+    return '/images/placeholder-product.svg';
   };
 
-  const imageUrl = getImageUrl();
+  const imageUrl = !imageError ? getImageUrl() : null;
   const price = parseFloat(item.price || 0);
   const quantity = item.quantity || 1;
   const totalPrice = price * quantity;
+
+  // Render placeholder
+  const renderPlaceholder = () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <Package className="w-8 h-8 text-gray-400" />
+    </div>
+  );
 
   return (
     <Card padding="normal" className="overflow-visible">
       <div className="flex">
         {/* Product Image */}
         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 mr-4">
-          {imageUrl ? (
+          {imageUrl && !imageError ? (
             <img
               src={imageUrl}
               alt={item.title || item.name || 'Product'}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src = '/placeholder-product.svg';
+                setImageError(true);
                 e.target.onerror = null;
               }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Package className="w-8 h-8 text-gray-400" />
-            </div>
-          )}
+          ) : renderPlaceholder()}
         </div>
 
         {/* Product Details */}

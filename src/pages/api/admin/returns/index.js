@@ -1,6 +1,36 @@
 // src/pages/api/admin/returns/index.js
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
+// Simple in-memory cache for orders
+let ordersCache = {
+  data: null,
+  timestamp: null,
+  expiresIn: 5 * 60 * 1000 // 5 minutes cache
+};
+
+// Simple rate limiter to prevent Shopify throttling
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 500; // 500ms = 2 requests/second max
+
+// Utility for rate-limited API requests
+async function rateLimitedRequest(requestFn) {
+  const now = Date.now();
+  const timeElapsed = now - lastRequestTime;
+  
+  // If we've made a request too recently, wait before making another
+  if (timeElapsed < MIN_REQUEST_INTERVAL) {
+    await new Promise(resolve => 
+      setTimeout(resolve, MIN_REQUEST_INTERVAL - timeElapsed)
+    );
+  }
+  
+  // Record this request time
+  lastRequestTime = Date.now();
+  
+  // Execute the request
+  return requestFn();
+}
+
 export default async function handler(req, res) {
   // Check for admin authorization
   const adminToken = req.headers.authorization?.split(' ')[1];
@@ -16,29 +46,80 @@ export default async function handler(req, res) {
   // Handle GET method (fetch returns)
   if (req.method === 'GET') {
     try {
-      console.log("Index route handler called for returns");
       const { status, dateRange, page = 1, limit = 10, search } = req.query;
       
       // Get Shopify client
       const shopifyClients = await getShopifyClientForTenant(tenantId);
       const client = shopifyClients.rest;
       
-      console.log("Fetching orders from Shopify");
+      // Check if we have a valid cache
+      let allOrders = [];
+      const now = Date.now();
       
-      // Fetch orders with status "any" to include all possible returns
-      const { body } = await client.get({
-        path: 'orders',
-        query: {
-          status: 'any',
-          limit: 250, // Maximum allowed by Shopify API
+      if (ordersCache.data && ordersCache.timestamp && 
+          (now - ordersCache.timestamp < ordersCache.expiresIn)) {
+        // Use cached data
+        allOrders = ordersCache.data;
+        console.log('Using cached orders data');
+      } else {
+        // Cache is invalid or expired, fetch new data
+        console.log("Fetching orders from Shopify");
+        
+        try {
+          // Use rate-limited request
+          const { body } = await rateLimitedRequest(() => 
+            client.get({
+              path: 'orders',
+              query: {
+                status: 'any',
+                limit: 250, // Maximum allowed by Shopify API
+              }
+            })
+          );
+          
+          allOrders = body.orders || [];
+          
+          // Update cache
+          ordersCache = {
+            data: allOrders,
+            timestamp: now,
+            expiresIn: 5 * 60 * 1000 // 5 minutes
+          };
+          
+          console.log(`Retrieved ${allOrders.length} orders`);
+        } catch (error) {
+          console.error('Shopify API error:', error.message);
+          
+          // If throttling error, retry after delay
+          if (error.message && error.message.includes('throttling')) {
+            console.log('Rate limit exceeded, waiting for 2 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Retry after waiting
+            const { body } = await client.get({
+              path: 'orders',
+              query: {
+                status: 'any',
+                limit: 250,
+              }
+            });
+            
+            allOrders = body.orders || [];
+            
+            // Update cache
+            ordersCache = {
+              data: allOrders,
+              timestamp: now,
+              expiresIn: 5 * 60 * 1000
+            };
+          } else {
+            // For other errors, rethrow
+            throw error;
+          }
         }
-      });
+      }
       
-      const allOrders = body.orders || [];
-      console.log(`Retrieved ${allOrders.length} orders`);
-      
-      // Process orders to find returns.
-      // We'll parse tags into arrays, then match any "return" tag or partial/full refund, etc.
+      // Process orders to find returns (keeping this logic the same)
       const returnsData = allOrders
         .filter(order => {
           const tagsArray = order.tags
@@ -48,22 +129,18 @@ export default async function handler(req, res) {
           const orderNote = order.note?.toLowerCase() || '';
           const financialStatus = order.financial_status?.toLowerCase() || '';
             
-          // Check for any return-related indicators:
-          // 1. Has refunds
+          // Check for any return-related indicators
           const hasRefunds = order.refunds && order.refunds.length > 0;
           
-          // 2. Has a return-related tag (in English or Norwegian)
           const returnKeywords = ['return', 'retur', 'bytte', 'exchange', 'refund', 'refusjon'];
           const hasReturnTag = tagsArray.some(tag => 
             returnKeywords.some(keyword => tag.includes(keyword))
           );
           
-          // 3. Has a return-related note
           const hasReturnNote = returnKeywords.some(keyword => 
             orderNote.includes(keyword)
           );
           
-          // 4. Financial status indicates return
           const returnStatuses = [
             'refunded', 'partially_refunded', 'refundert', 
             'delvis_refundert', 'retur pågår', 'delvis fullført'
@@ -72,7 +149,6 @@ export default async function handler(req, res) {
             financialStatus.includes(rs)
           );
           
-          // 5. Check for specific Norwegian words used in your store
           const norwegianIndicators = [
             'delvis', 'sluttført', 'ferdig', 'informasjon'
           ];
@@ -82,12 +158,12 @@ export default async function handler(req, res) {
             financialStatus.includes(word)
           );
           
-          // Return true if ANY of these conditions are met
           return hasRefunds || hasReturnTag || hasReturnNote || 
                 hasReturnStatus || hasNorwegianIndicator;
         })
         .map(order => {
           try {
+            // (Rest of the mapping logic remains the same)
             const tagsArray = order.tags
               ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
               : [];
@@ -135,7 +211,7 @@ export default async function handler(req, res) {
               'pending': 'pending'
             };
             
-            // Check tags first, as they generally override other status indicators
+            // Check tags first
             for (const [keyword, status] of Object.entries(statusMappings)) {
               if (tagsArray.some(tag => tag.includes(keyword))) {
                 returnStatus = status;
@@ -143,11 +219,10 @@ export default async function handler(req, res) {
               }
             }
             
-            // Financial status can also indicate return status
+            // Financial status indicators
             if (financialStatus === 'refunded') {
               returnStatus = 'completed';
             } else if (financialStatus === 'partially_refunded') {
-              // If partially refunded and not explicitly marked otherwise, consider it approved
               if (returnStatus === 'pending') {
                 returnStatus = 'approved';
               }
@@ -164,7 +239,7 @@ export default async function handler(req, res) {
               returnStatus = 'completed';
             }
             
-            // Check if order is fully refunded vs. partially refunded
+            // Check if order is fully refunded
             const isFullyRefunded = financialStatus === 'refunded' || 
               (order.refunds && 
               order.line_items && 
@@ -197,15 +272,13 @@ export default async function handler(req, res) {
         
       console.log(`Found ${returnsData.length} returns`);
 
-      // Apply filters (status, date range, search)
+      // Apply filters (same logic as before)
       let filteredReturns = returnsData;
 
-      // 1) Filter by status
       if (status && status !== 'all') {
         filteredReturns = filteredReturns.filter(r => r.status === status);
       }
 
-      // 2) Filter by date range
       if (dateRange && dateRange !== 'all') {
         const now = new Date();
         let cutoffDate = new Date();
@@ -225,7 +298,6 @@ export default async function handler(req, res) {
         );
       }
       
-      // 3) Filter by search term (order ID, customer name, or email)
       if (search) {
         const searchTerm = search.toLowerCase();
         filteredReturns = filteredReturns.filter(r => 
@@ -243,7 +315,7 @@ export default async function handler(req, res) {
       const endIndex = parseInt(page) * parseInt(limit);
       const paginatedReturns = filteredReturns.slice(startIndex, endIndex);
       
-      // Return summary statistics with the results
+      // Return summary statistics
       return res.status(200).json({
         returns: paginatedReturns,
         total: filteredReturns.length,
@@ -264,7 +336,7 @@ export default async function handler(req, res) {
       console.error('Error fetching admin returns:', err);
       return res.status(500).json({
         error: 'Server Error',
-        message: 'An error occurred while processing your request',
+        message: `Error fetching admin returns: ${err.message}`,
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }

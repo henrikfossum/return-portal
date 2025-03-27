@@ -1,5 +1,5 @@
 // src/hooks/useAdminReturns.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAdmin } from '@/lib/context/AdminContext';
 
 export function useAdminReturns() {
@@ -27,10 +27,33 @@ export function useAdminReturns() {
     totalPages: 1,
     current: 1
   });
+  
+  // Add this to prevent duplicate requests
+  const isFetchingRef = useRef(false);
+  // Add this to track mounted state
+  const isMountedRef = useRef(true);
+  // Add this to track when we last fetched data
+  const lastFetchTimeRef = useRef(0);
 
   // Fetch returns based on filters
   const fetchReturns = useCallback(async (filterOverrides = {}) => {
     if (!isAuthenticated) return;
+    
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('Already fetching returns, ignoring request');
+      return;
+    }
+    
+    // Check if we've fetched within the last second (debouncing)
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < 1000) {
+      console.log('Fetched too recently, ignoring request');
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
     
     setLoading(true);
     setError(null);
@@ -47,8 +70,6 @@ export function useAdminReturns() {
       queryParams.append('limit', currentFilters.limit);
       queryParams.append('includeAll', 'true');
       
-      // IMPORTANT: Just use the base API route, without explicitly adding "index"
-      // Next.js will route properly to the index.js file
       const response = await authFetch(`/api/admin/returns?${queryParams.toString()}`);
       
       if (!response.ok) {
@@ -58,27 +79,35 @@ export function useAdminReturns() {
       
       const data = await response.json();
       
-      setReturns(data.returns || []);
-      setStats(data.stats || {
-        totalReturns: 0,
-        pendingReturns: 0,
-        approvedReturns: 0,
-        completedReturns: 0,
-        flaggedReturns: 0,
-        rejectedReturns: 0
-      });
-      setPagination({
-        total: data.total || 0,
-        totalPages: data.totalPages || 1,
-        current: data.page || 1
-      });
+      // Check if component is still mounted before updating state
+      if (isMountedRef.current) {
+        setReturns(data.returns || []);
+        setStats(data.stats || {
+          totalReturns: 0,
+          pendingReturns: 0,
+          approvedReturns: 0,
+          completedReturns: 0,
+          flaggedReturns: 0,
+          rejectedReturns: 0
+        });
+        setPagination({
+          total: data.total || 0,
+          totalPages: data.totalPages || 1,
+          current: data.page || 1
+        });
+      }
       
       return data;
     } catch (err) {
       console.error('Error fetching returns:', err);
-      setError(err.message || 'An error occurred while fetching returns');
+      if (isMountedRef.current) {
+        setError(err.message || 'An error occurred while fetching returns');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
   }, [isAuthenticated, filters, authFetch]);
 
@@ -103,6 +132,11 @@ export function useAdminReturns() {
     if (isAuthenticated) {
       fetchReturns();
     }
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [isAuthenticated, fetchReturns]);
 
   return {
@@ -124,11 +158,23 @@ export function useAdminReturnDetail(id) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Add this to prevent duplicate requests
+  const isFetchingRef = useRef(false);
+  // Add this to track mounted state
+  const isMountedRef = useRef(true);
 
   // Fetch return details
   const fetchReturnDetail = useCallback(async () => {
     if (!isAuthenticated || !id) return;
     
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('Already fetching return detail, ignoring request');
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     
@@ -141,14 +187,23 @@ export function useAdminReturnDetail(id) {
       }
       
       const data = await response.json();
-      setReturnData(data);
+      
+      // Check if component is still mounted before updating state
+      if (isMountedRef.current) {
+        setReturnData(data);
+      }
       
       return data;
     } catch (err) {
       console.error('Error fetching return details:', err);
-      setError(err.message || 'An error occurred while fetching return details');
+      if (isMountedRef.current) {
+        setError(err.message || 'An error occurred while fetching return details');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
   }, [isAuthenticated, id, authFetch]);
 
@@ -175,10 +230,14 @@ export function useAdminReturnDetail(id) {
       return true;
     } catch (err) {
       console.error('Error updating return status:', err);
-      setError(err.message || 'An error occurred while updating return');
+      if (isMountedRef.current) {
+        setError(err.message || 'An error occurred while updating return');
+      }
       return false;
     } finally {
-      setActionLoading(false);
+      if (isMountedRef.current) {
+        setActionLoading(false);
+      }
     }
   }, [isAuthenticated, id, authFetch, fetchReturnDetail]);
 
@@ -207,6 +266,11 @@ export function useAdminReturnDetail(id) {
     if (isAuthenticated && id) {
       fetchReturnDetail();
     }
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [isAuthenticated, id, fetchReturnDetail]);
 
   return {

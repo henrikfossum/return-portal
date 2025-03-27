@@ -90,7 +90,7 @@ export function ReturnProvider({ children }) {
   // Save state to localStorage when it changes
   useEffect(() => {
     // Don't save loading and error states
-    const { loading, error, ...stateToSave } = state;
+    const { ...stateToSave } = state;
     setLocalStorage('returnState', stateToSave);
   }, [state]);
 

@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { useLocale } from '@/lib/i18n';
+import Image from 'next/image';
 
 // Step indicators for the return process
 const steps = [
@@ -90,7 +91,7 @@ export default function ReturnLayout({
           {/* Show logo if available */}
           {theme?.logo && (
             <div className="flex justify-center mb-4">
-              <img 
+              <Image 
                 src={theme.logo} 
                 alt={title}
                 style={{ 

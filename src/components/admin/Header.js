@@ -1,6 +1,5 @@
 // src/components/admin/Header.js
 import React from 'react';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { LogOut, LayoutDashboard } from 'lucide-react';
 import { useAdmin } from '@/lib/context/AdminContext';

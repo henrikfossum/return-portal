@@ -64,7 +64,6 @@ export const LogLevel = {
      */
     formatMessage(level, message, data = {}, category = LogCategory.SYSTEM) {
       const timestamp = config.timestamps ? new Date().toISOString() : '';
-      const formattedData = typeof data === 'string' ? data : JSON.stringify(data);
       
       return {
         timestamp,
@@ -108,7 +107,7 @@ export const LogLevel = {
      * This is a placeholder for integration with services like
      * Sentry, Datadog, New Relic, etc.
      */
-    async sendToMonitoring(entry) {
+    async sendToMonitoring() {
       // In a production environment, this would send to an external service
       // Example integration with Sentry:
       /*

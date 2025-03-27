@@ -1,10 +1,8 @@
 // src/pages/admin/fraud/index.js
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
-import { AlertTriangle, User, Calendar, Filter, Download, ExternalLink, ChevronRight } from 'lucide-react';
+import { AlertTriangle, User } from 'lucide-react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import AdminLayout from '@/components/admin/Layout';
 import { useAdmin } from '@/lib/context/AdminContext';
 
@@ -104,7 +102,8 @@ export default function FraudPreventionDashboard() {
   // Load data on mount and when timeframe changes
   useEffect(() => {
     fetchFraudData(timeframe);
-  }, [timeframe, authFetch]);
+  }, [timeframe, authFetch, fetchFraudData]);
+  
   
   // Handle timeframe change
   const handleTimeframeChange = (newTimeframe) => {

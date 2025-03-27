@@ -115,17 +115,28 @@ export function formatDate(date, locale = 'en', options = {}) {
 }
 
 // Helper function to format numbers according to locale
-export function formatNumber(number, options = {}) {
-  const { locale } = useLocale();
-  return new Intl.NumberFormat(locale, options).format(number);
+export function useNumberFormatter() {
+  const locale = useLocale();
+  
+  const formatNumber = useCallback((number, options = {}) => {
+    // Implementation
+    return new Intl.NumberFormat(locale, options).format(number);
+  }, [locale]);
+  
+  return formatNumber;
 }
 
-// Helper function to format currency according to locale
-export function formatCurrency(amount, currency = 'USD', options = {}) {
-  const { locale } = useLocale();
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    ...options
-  }).format(amount);
+export function useCurrencyFormatter() {
+  const locale = useLocale();
+  
+  const formatCurrency = useCallback((amount, options = {}) => {
+    // Implementation
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'USD',
+      ...options
+    }).format(amount);
+  }, [locale]);
+  
+  return formatCurrency;
 }

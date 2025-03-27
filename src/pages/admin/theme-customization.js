@@ -24,15 +24,26 @@ export default function ThemeCustomization() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Fetch current theme settings
-  useEffect(() => {
+// Fetch current theme settings
+useEffect(() => {
     async function loadSettings() {
       setLoading(true);
       try {
+        // First, check localStorage
+        const storedTheme = localStorage.getItem('tenant-theme-default');
+        if (storedTheme) {
+          const parsedTheme = JSON.parse(storedTheme);
+          setSettings(parsedTheme);
+        }
+  
+        // Then fetch from server to ensure we have the latest
         const response = await authFetch('/api/admin/theme');
         if (response.ok) {
           const data = await response.json();
           setSettings(data);
+          
+          // Update localStorage with server data
+          localStorage.setItem('tenant-theme-default', JSON.stringify(data));
         } else {
           throw new Error('Failed to load theme settings');
         }
@@ -48,7 +59,7 @@ export default function ThemeCustomization() {
   }, [authFetch]);
 
   // Handle saving settings
-  const handleSave = async () => {
+const handleSave = async () => {
     setSaving(true);
     setMessage(null);
     try {
@@ -61,7 +72,14 @@ export default function ThemeCustomization() {
         throw new Error('Failed to save settings');
       }
       
+      // Persist to localStorage
+      localStorage.setItem('tenant-theme-default', JSON.stringify(settings));
+      
+      // Optional: Add a visual indicator of successful save
       setMessage({ type: 'success', text: 'Theme settings saved successfully' });
+      
+      // Suggest page reload or provide a reload button
+      // You could add a reload button next to the success message
     } catch (error) {
       console.error('Error saving settings:', error);
       setMessage({ type: 'error', text: 'Failed to save settings' });
@@ -120,13 +138,22 @@ export default function ThemeCustomization() {
       
       {message && (
         <div 
-          className={`mb-6 p-4 rounded-md ${
+            className={`mb-6 p-4 rounded-md flex justify-between items-center ${
             message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-          }`}
+            }`}
         >
-          {message.text}
+            <span>{message.text}</span>
+            {message.type === 'success' && (
+            <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.location.reload()}
+            >
+                Reload Page
+            </Button>
+            )}
         </div>
-      )}
+        )}
       
       {loading ? (
         <div className="flex justify-center py-12">

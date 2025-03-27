@@ -5,9 +5,16 @@ import { tenantConfigs } from '@/lib/tenant/config';
 let themeCache = {};
 
 export default async function handler(req, res) {
+  console.log('Theme API Request:', {
+    method: req.method,
+    body: req.body,
+    tenantId: req.headers['x-tenant-id'] || 'default'
+  });
+
   // Check for admin authorization
   const adminToken = req.headers.authorization?.split(' ')[1];
   if (!adminToken || adminToken !== 'demo-admin-token') {
+    console.error('Unauthorized theme request');
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Admin authentication required'
@@ -21,6 +28,7 @@ export default async function handler(req, res) {
     try {
       // If we have cached theme settings, return those
       if (themeCache[tenantId]) {
+        console.log('Returning cached theme settings');
         return res.status(200).json(themeCache[tenantId]);
       }
       
@@ -33,6 +41,7 @@ export default async function handler(req, res) {
       // Cache the settings
       themeCache[tenantId] = themeSettings;
       
+      console.log('Returning default theme settings');
       return res.status(200).json(themeSettings);
     } catch (err) {
       console.error('Error fetching theme settings:', err);
@@ -49,8 +58,11 @@ export default async function handler(req, res) {
     try {
       const updatedSettings = req.body;
       
+      console.log('Received theme update:', updatedSettings);
+      
       // Basic validation
       if (!updatedSettings || typeof updatedSettings !== 'object') {
+        console.error('Invalid theme settings data');
         return res.status(400).json({
           error: 'Invalid Request',
           message: 'Invalid theme settings data'
@@ -60,8 +72,7 @@ export default async function handler(req, res) {
       // Store the updated settings
       themeCache[tenantId] = updatedSettings;
       
-      // In a real application, you would save these to a database
-      // For demo purposes, we're just storing them in memory
+      console.log('Theme settings updated successfully:', themeCache[tenantId]);
       
       return res.status(200).json({
         success: true,

@@ -214,10 +214,13 @@ export default function ReturnLayout({
         
         {/* Main content */}
         <motion.div 
-          variants={childVariants}
-          className="rounded-md shadow-md overflow-hidden bg-white"
-          style={{ backgroundColor: '#fff', borderColor: theme?.borderColor || 'var(--color-border)' }}
-        >
+            variants={childVariants}
+            className="rounded-md shadow-md overflow-hidden"
+            style={{ 
+              backgroundColor: theme?.cardBackground || 'var(--theme-card, #ffffff)', 
+              borderColor: theme?.borderColor || 'var(--color-border)' 
+            }}
+          >
           {/* Back button if needed */}
           {showBackButton && onBackClick && (
             <div className="bg-gray-50 px-4 py-2 border-b border-gray-200"

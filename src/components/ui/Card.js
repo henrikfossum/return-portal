@@ -98,7 +98,7 @@ export default function Card({
         ${className}
       `}
       style={{
-        backgroundColor: theme?.backgroundColor || 'var(--theme-card, #ffffff)',
+        backgroundColor: theme?.cardBackground || 'var(--theme-card, #ffffff)',
         ...elevationStyles,
         ...(onClick ? { '&:hover': { borderColor: 'var(--theme-secondary-300)' } } : {}),
         ...props.style,

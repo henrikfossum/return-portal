@@ -25,32 +25,9 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   
   // Load theme when component mounts or tenantId changes
   useEffect(() => {
+    console.log('ThemeProvider: Loading theme for tenant', tenantId);
     loadTheme();
   }, [tenantId]);
-
-  // Function to load theme that can be called directly
-  const loadTheme = async () => {
-    try {
-      setLoading(true);
-      const themeConfig = await getTenantTheme(tenantId);
-      
-      if (themeConfig) {
-        setTheme(themeConfig);
-        
-        // Apply theme to DOM
-        applyThemeToDom(themeConfig);
-        
-        // Load custom fonts if needed
-        if (themeConfig.fontFamily) {
-          loadCustomFont(themeConfig.fontFamily);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading theme:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Toggle between light and dark mode
   const toggleMode = useCallback(() => {
@@ -79,10 +56,50 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     }
   }, []);
 
+  // Function to load theme that can be called directly
+  const loadTheme = async () => {
+    try {
+      console.log('Loading theme - Start');
+      setLoading(true);
+      const themeConfig = await getTenantTheme(tenantId);
+      
+      console.group('Theme Loading');
+      console.log('Tenant ID:', tenantId);
+      console.log('Loaded Theme Config:', themeConfig);
+      
+      if (themeConfig) {
+        // Log each theme property
+        Object.entries(themeConfig).forEach(([key, value]) => {
+          console.log(`Theme Property - ${key}:`, value);
+        });
+  
+        setTheme(themeConfig);
+        
+        // Apply theme to DOM with detailed logging
+        applyThemeToDom(themeConfig);
+        
+        // Load custom fonts if needed
+        if (themeConfig.fontFamily) {
+          console.log('Loading font:', themeConfig.fontFamily);
+          loadCustomFont(themeConfig.fontFamily);
+        }
+      } else {
+        console.warn('No theme configuration found');
+      }
+      console.groupEnd();
+    } catch (error) {
+      console.error('Error loading theme:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Update theme settings and apply changes
   const updateTheme = async (newThemeSettings) => {
     try {
       setLoading(true);
+      
+      console.log('Updating theme with:', newThemeSettings);
       
       // Merge with current theme
       const updatedTheme = {
@@ -111,8 +128,11 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     }
   };
 
+
   // Apply theme to DOM by setting CSS variables
   const applyThemeToDom = (themeConfig) => {
+    console.log('Applying theme to DOM:', themeConfig);
+    
     if (!themeConfig || typeof document === 'undefined') return;
     
     // Primary color and shades
@@ -139,9 +159,9 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     setCssVar('--theme-danger-500', themeConfig.dangerColor || '#e60000');
     
     // Base UI colors
-    setCssVar('--theme-background', themeConfig.backgroundColor || '#ffffff');
+    setCssVar('--theme-background', '#ffffff');
     setCssVar('--theme-surface', themeConfig.backgroundColor || '#ffffff');
-    setCssVar('--theme-card', '#ffffff');
+    setCssVar('--theme-card', themeConfig.backgroundColor || '#ffffff');
     setCssVar('--theme-border', themeConfig.borderColor || '#e5e7eb');
     
     // Text colors
@@ -175,10 +195,13 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       // Update the content
       styleElement.textContent = themeConfig.customCSS;
     }
+
+    console.log('Theme applied to DOM successfully');
   };
 
   // Helper to set CSS variables
   const setCssVar = (name, value) => {
+    console.log(`Setting CSS variable ${name} to ${value}`);
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty(name, value);
     }

@@ -1,11 +1,10 @@
 // src/pages/admin/returns/[id].js
 import React, { useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { 
-  ArrowLeft, User, Package, Calendar, RefreshCw, CheckCircle, 
-  XCircle, AlertTriangle, DollarSign, Shield, Tag, Truck
+  ArrowLeft, User, Package, RefreshCw, CheckCircle, 
+  XCircle, AlertTriangle, Shield, Truck
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -204,7 +203,7 @@ export default function ReturnDetail() {
       <AdminLayout title="Return Details">
         <div className="text-center">
           <h2 className="text-lg font-medium text-gray-900">Return not found</h2>
-          <p className="text-gray-500 mt-2">The return you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-500 mt-2">The return you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Link href="/admin/returns">
             <Button className="mt-4" variant="primary">
               Back to Returns

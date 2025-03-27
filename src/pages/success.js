@@ -1,5 +1,4 @@
 // src/pages/success.js
-import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { CheckCircle, ShoppingBag, ArrowRight, Printer, Mail, FileText } from 'lucide-react';
 import ReturnLayout from '@/components/return/ReturnLayout';
@@ -66,7 +65,7 @@ export default function Success() {
               Return Request Submitted
             </motion.h2>
             <motion.p variants={itemVariants} className="text-gray-600">
-              Your return/exchange request has been successfully submitted. We'll email you with the next steps.
+              Your return/exchange request has been successfully submitted. We&apos;ll email you with the next steps.
             </motion.p>
           </div>
           
@@ -111,7 +110,7 @@ export default function Success() {
                 <div>
                   <p className="font-medium text-gray-900">Package your items</p>
                   <p className="text-sm text-gray-600 mt-1">
-                    Place the items you're returning in their original packaging if possible.
+                    Place the items you&apos;re returning in their original packaging if possible.
                   </p>
                 </div>
               </li>

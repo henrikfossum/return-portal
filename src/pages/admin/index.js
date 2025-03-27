@@ -1,6 +1,5 @@
 // src/pages/admin/index.js
 import React from 'react';
-import Head from 'next/head';
 import { Package, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';

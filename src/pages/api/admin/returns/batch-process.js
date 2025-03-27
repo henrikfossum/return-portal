@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { items, orderDetails } = req.body;
+  const { items } = req.body;
   const tenantId = req.headers['x-tenant-id'] || 'default';
   
   // Validate items

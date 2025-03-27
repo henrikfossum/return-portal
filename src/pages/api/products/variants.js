@@ -73,12 +73,12 @@ export default async function handler(req, res) {
               }
             }
           } catch (inventoryError) {
-            console.log(`Using fallback inventory check for variant ${variant.id}`);
-            
+            console.log(`Using fallback inventory check for variant ${variant.id}:`, inventoryError);
             // Fallback: Use the variant's own inventory fields
             inventory = variant.inventory_quantity || 0;
             isAvailable = variant.inventory_policy === 'continue' || inventory > 0;
           }
+          
           
           return {
             ...variant,

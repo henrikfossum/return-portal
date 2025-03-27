@@ -1,5 +1,4 @@
-// src/pages/admin/fraud/index.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, User } from 'lucide-react';
 import Card from '@/components/ui/Card';
@@ -25,8 +24,13 @@ export default function FraudPreventionDashboard() {
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('30days');
   
-  // Fetch fraud data
-  const fetchFraudData = async (selectedTimeframe = timeframe) => {
+  // Memoized helper to calculate potential savings from flagged returns
+  const calculatePotentialSavings = useCallback((returnsArray) => {
+    return returnsArray.reduce((total, item) => total + (item.total || 0), 0);
+  }, []);
+  
+  // Memoized function to fetch fraud data
+  const fetchFraudData = useCallback(async (selectedTimeframe = timeframe) => {
     setLoading(true);
     setError(null);
     
@@ -39,9 +43,6 @@ export default function FraudPreventionDashboard() {
       }
       
       const analyticsData = await response.json();
-      
-      // Get flagged returns from the analytics data
-      const flaggedReturns = analyticsData.flaggedReturns || [];
       
       // Get detailed returns data
       const returnsResponse = await authFetch('/api/admin/returns?status=flagged');
@@ -97,13 +98,12 @@ export default function FraudPreventionDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authFetch, timeframe, calculatePotentialSavings]);
   
   // Load data on mount and when timeframe changes
   useEffect(() => {
     fetchFraudData(timeframe);
-  }, [timeframe, authFetch, fetchFraudData]);
-  
+  }, [timeframe, fetchFraudData]);
   
   // Handle timeframe change
   const handleTimeframeChange = (newTimeframe) => {
@@ -116,11 +116,6 @@ export default function FraudPreventionDashboard() {
       style: 'currency',
       currency: 'USD'
     }).format(value);
-  };
-  
-  // Calculate potential savings from flagged returns
-  const calculatePotentialSavings = (flaggedReturns) => {
-    return flaggedReturns.reduce((total, item) => total + (item.total || 0), 0);
   };
   
   // Format date string
@@ -166,7 +161,6 @@ export default function FraudPreventionDashboard() {
         </div>
       )}
       
-      {/* Loading or render content */}
       {loading ? (
         <div className="min-h-[400px] flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -223,7 +217,7 @@ export default function FraudPreventionDashboard() {
             </Card>
           </div>
           
-          {/* Flagged Returns */}
+          {/* Flagged Returns Table */}
           <Card title="Flagged Returns" padding="normal">
             {fraudData.flaggedReturns.length === 0 ? (
               <div className="py-6 text-center text-gray-500">
@@ -295,7 +289,7 @@ export default function FraudPreventionDashboard() {
             )}
           </Card>
           
-          {/* High Risk Customers */}
+          {/* High Risk Customers Table */}
           <Card title="High Risk Customers" padding="normal">
             {fraudData.highRiskCustomers.length === 0 ? (
               <div className="py-6 text-center text-gray-500">

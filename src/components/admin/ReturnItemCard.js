@@ -74,7 +74,7 @@ export default function ReturnItemCard({
         {/* Product Image or Icon */}
         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 mr-4 flex items-center justify-center">
           {imageUrl && !imageError ? (
-            <img
+            <Image
               src={imageUrl}
               alt={item.title || item.name || 'Product'}
               className="w-full h-full object-cover"

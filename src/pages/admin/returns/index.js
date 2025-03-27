@@ -1,13 +1,11 @@
 // src/pages/admin/returns/index.js
-import React, { useState, useEffect, useCallback } from 'react';
-import Head from 'next/head';
+import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Download, AlertTriangle, CheckCircle, Package, RefreshCw, Clock } from 'lucide-react';
+import { Search, Download, AlertTriangle, CheckCircle, Package, Clock } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import AdminLayout from '@/components/admin/Layout';
 import { useAdminReturns } from '@/hooks/useAdminReturns';
-import ReturnItemCard from '@/components/admin/ReturnItemCard'; // Our new component
 
 export default function ReturnsManagement() {
   const {
@@ -18,8 +16,7 @@ export default function ReturnsManagement() {
     pagination,
     stats,
     updateFilters,
-    changePage,
-    fetchReturns
+    changePage
   } = useAdminReturns();
 
   // Local state for UI enhancements

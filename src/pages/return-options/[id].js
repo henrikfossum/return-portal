@@ -1,7 +1,7 @@
 // src/pages/return-options/[id].js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { RefreshCw, ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantSettings } from '@/lib/tenant/hooks';
 import ReturnLayout from '@/components/return/ReturnLayout';
@@ -38,7 +38,7 @@ export default function ReturnOptions() {
     if (!loading && router.isReady && (!order || !currentItem)) {
       router.replace('/');
     }
-  }, [order, currentItem, router.isReady, loading]);
+  }, [order, currentItem, router, loading]);  
 
   // Handle back button
   const handleBack = () => {
@@ -189,8 +189,8 @@ export default function ReturnOptions() {
                     />
                     <div className="ml-3">
                       <span className="text-gray-900 font-medium block">Exchange for another size/color</span>
-                      <span className="text-gray-500 text-sm">We'll ship a replacement product to you</span>
-                    </div>
+                      <span className="text-gray-500 text-sm">We&apos;ll ship a replacement product to you</span>
+                      </div>
                   </div>
                 </label>
               </motion.div>

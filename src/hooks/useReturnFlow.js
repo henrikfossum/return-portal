@@ -10,7 +10,6 @@ export function useReturnFlow() {
     itemsToReturn,
     returnReasons,
     returnOptions,
-    currentStep,
     loading,
     error,
     setOrder,
@@ -19,7 +18,6 @@ export function useReturnFlow() {
     setReturnOption,
     setLoading,
     setError,
-    setCurrentStep,
     resetState,
   } = useReturnContext();
 
@@ -220,7 +218,6 @@ export function useReturnFlow() {
     returnReasons,
     returnOptions,
     selectedItems,
-    currentStep,
     loading,
     error,
     

@@ -1,5 +1,4 @@
-// src/pages/admin/analytics/index.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart3, PieChart, TrendingUp, AlertTriangle, Calendar, RefreshCw } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -27,8 +26,8 @@ export default function AnalyticsDashboard() {
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('30days');
   
-  // Fetch analytics data
-  const fetchAnalytics = async (selectedTimeframe = timeframe) => {
+  // Memoized function to fetch analytics data
+  const fetchAnalytics = useCallback(async (selectedTimeframe) => {
     setLoading(true);
     setError(null);
     
@@ -47,12 +46,12 @@ export default function AnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authFetch]);
   
   // Load data on mount and when timeframe changes
   useEffect(() => {
     fetchAnalytics(timeframe);
-  }, [timeframe, authFetch]);
+  }, [timeframe, fetchAnalytics]);
   
   // Handle timeframe change
   const handleTimeframeChange = (newTimeframe) => {
@@ -115,12 +114,6 @@ export default function AnalyticsDashboard() {
     return Math.max(...returnRates, 10); // Minimum of 10% for scale
   };
   
-  // Find max returns count for timeline data
-  const getMaxReturnsCount = () => {
-    const returnCounts = analyticsData.timeline.map(t => t.returns);
-    return Math.max(...returnCounts, 10); // Minimum of 10 for scale
-  };
-  
   return (
     <AdminLayout title="Analytics Dashboard">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -160,14 +153,12 @@ export default function AnalyticsDashboard() {
         </div>
       )}
       
-      {/* Loading or render content */}
       {loading ? (
         <div className="min-h-[400px] flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {getSummaryData().map((item, index) => (
               <Card key={index} padding="normal">
@@ -184,9 +175,7 @@ export default function AnalyticsDashboard() {
             ))}
           </div>
           
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Timeline Visualization (simple bar chart) */}
             <Card title="Return Rate Over Time" padding="normal">
               <div className="p-4 h-80">
                 {analyticsData.timeline.length > 0 ? (
@@ -228,7 +217,6 @@ export default function AnalyticsDashboard() {
               </div>
             </Card>
             
-            {/* Reasons Visualization (simple bars) */}
             <Card title="Top Return Reasons" padding="normal">
               <div className="p-4 h-80">
                 {analyticsData.reasons.length > 0 ? (
@@ -265,7 +253,6 @@ export default function AnalyticsDashboard() {
             </Card>
           </div>
           
-          {/* Fraud Prevention Card */}
           <Card title="Fraud Prevention Insights" padding="normal">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
               <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">

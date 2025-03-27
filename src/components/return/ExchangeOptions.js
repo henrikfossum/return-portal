@@ -110,7 +110,7 @@ export default function ExchangeOptions({
       setSelectedColor(originalOpts.color);
       setSelectedOtherOptions(originalOpts.other);
     }
-  }, [product, otherOptions]);
+  }, [product]);
 
   // Find the matching variant when selections change
   useEffect(() => {

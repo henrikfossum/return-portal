@@ -8,7 +8,7 @@ import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import ProductCard from '@/components/return/ProductCard';
 import ReturnPolicyInfo from '@/components/return/ReturnPolicyInfo';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export default function OrderDetails() {
   const router = useRouter();
@@ -44,8 +44,9 @@ export default function OrderDetails() {
     
     // Validate selection
     const selectedItemIds = Object.entries(selectedItems)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([, qty]) => qty > 0)
       .map(([id]) => id);
+  
       
     if (selectedItemIds.length === 0) {
       setLocalError('Please select at least one item to continue');
@@ -177,7 +178,7 @@ export default function OrderDetails() {
               <AlertCircle className="h-14 w-14 text-yellow-500 mb-3" />
               <h3 className="text-xl font-medium text-yellow-800 mb-2">No Eligible Items</h3>
               <p className="text-yellow-700 max-w-md">
-                We couldn't find any eligible items for return in this order.
+                We couldn&apos;t find any eligible items for return in this order.
               </p>
             </div>
             

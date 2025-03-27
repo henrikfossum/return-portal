@@ -22,10 +22,8 @@ export default function ReturnReview() {
     order,
     itemsToReturn,
     loading,
-    error,
     completeReturn
   } = useReturnFlow();
-  const { theme } = useTenantTheme();
   const { settings } = useTenantSettings();
   
   // Default return options with fallback values

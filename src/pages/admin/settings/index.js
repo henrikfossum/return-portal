@@ -1,6 +1,5 @@
 // src/pages/admin/settings/index.js
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
 import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -42,7 +41,6 @@ export default function AdminSettings() {
   });
   
   // Form state
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);

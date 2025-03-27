@@ -154,9 +154,6 @@ export default async function handler(req, res) {
     const refunds = order.refunds.flatMap(refund =>
       refund.refund_line_items.map(item => item.line_item_id)
     );
-
-    // Create a map of product tags to use for eligibility checks
-    const productTagsMap = {};
     
     // Filter eligible items with detailed validation
     const eligibleItems = [];

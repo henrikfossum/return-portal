@@ -1,5 +1,4 @@
 // src/pages/api/admin/settings.js
-import { getShopifyClientForTenant } from '@/lib/shopify/client';
 import { tenantConfigs } from '@/lib/tenant/config';
 
 // In-memory storage for settings (in production this would be in a database)

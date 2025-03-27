@@ -69,7 +69,6 @@ export default async function handler(req, res) {
         ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
         : [];
       
-      const orderNote = order.note?.toLowerCase() || '';
       const financialStatus = order.financial_status?.toLowerCase() || '';
 
       // Start with default status

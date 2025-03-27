@@ -1,4 +1,3 @@
-// src/lib/context/ThemeContext.js
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getTenantTheme } from '../tenant/service';
 
@@ -18,46 +17,12 @@ export function useTheme() {
  * Theme Provider Component
  */
 export function ThemeProvider({ children, tenantId = 'default' }) {
-  // Theme state
   const [theme, setTheme] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('light'); // 'light' or 'dark'
-  
-  // Load theme when component mounts or tenantId changes
-  useEffect(() => {
-    console.log('ThemeProvider: Loading theme for tenant', tenantId);
-    loadTheme();
-  }, [tenantId, loadTheme]); 
 
-  // Toggle between light and dark mode
-  const toggleMode = useCallback(() => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setMode(newMode);
-    
-    // Toggle the 'dark' class on the document
-    if (newMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    
-    // Persist preference
-    localStorage.setItem('colorMode', newMode);
-  }, [mode]);
-  
-  // Check for saved color mode preference when component mounts
-  useEffect(() => {
-    const savedMode = localStorage.getItem('colorMode') || 
-                     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    
-    if (savedMode === 'dark') {
-      setMode('dark');
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  // Function to load theme that can be called directly
-  const loadTheme = async () => {
+  // Wrap loadTheme in useCallback so its reference remains stable
+  const loadTheme = useCallback(async () => {
     try {
       console.log('Loading theme - Start');
       setLoading(true);
@@ -72,12 +37,10 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
         Object.entries(themeConfig).forEach(([key, value]) => {
           console.log(`Theme Property - ${key}:`, value);
         });
-  
+
         setTheme(themeConfig);
-        
-        // Apply theme to DOM with detailed logging
         applyThemeToDom(themeConfig);
-        
+
         // Load custom fonts if needed
         if (themeConfig.fontFamily) {
           console.log('Loading font:', themeConfig.fontFamily);
@@ -92,7 +55,39 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]); // Recreate only when tenantId changes
+
+  // Load theme when component mounts or tenantId changes
+  useEffect(() => {
+    console.log('ThemeProvider: Loading theme for tenant', tenantId);
+    loadTheme();
+  }, [tenantId, loadTheme]);
+
+  // Toggle between light and dark mode
+  const toggleMode = useCallback(() => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    
+    if (newMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    localStorage.setItem('colorMode', newMode);
+  }, [mode]);
+  
+  // Check for saved color mode preference when component mounts
+  useEffect(() => {
+    const savedMode =
+      localStorage.getItem('colorMode') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    
+    if (savedMode === 'dark') {
+      setMode('dark');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
 
   // Update theme settings and apply changes
   const updateTheme = async (newThemeSettings) => {
@@ -101,21 +96,15 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       
       console.log('Updating theme with:', newThemeSettings);
       
-      // Merge with current theme
       const updatedTheme = {
         ...theme,
-        ...newThemeSettings
+        ...newThemeSettings,
       };
       
-      // Update state
       setTheme(updatedTheme);
-      
-      // Apply to DOM
       applyThemeToDom(updatedTheme);
       
-      // Load fonts if needed
-      if (newThemeSettings.fontFamily && 
-          newThemeSettings.fontFamily !== theme?.fontFamily) {
+      if (newThemeSettings.fontFamily && newThemeSettings.fontFamily !== theme?.fontFamily) {
         loadCustomFont(newThemeSettings.fontFamily);
       }
       
@@ -128,11 +117,9 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     }
   };
 
-
   // Apply theme to DOM by setting CSS variables
   const applyThemeToDom = (themeConfig) => {
     console.log('Applying theme to DOM:', themeConfig);
-    
     if (!themeConfig || typeof document === 'undefined') return;
     
     // Primary color and shades
@@ -147,7 +134,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     setCssVar('--theme-primary-800', darkenColor(themeConfig.primaryColor, 0.6) || '#00335c');
     setCssVar('--theme-primary-900', darkenColor(themeConfig.primaryColor, 0.8) || '#001d33');
     
-    // Secondary color (might not have shades defined)
+    // Secondary color
     setCssVar('--theme-secondary-500', themeConfig.secondaryColor || '#64748b');
     setCssVar('--theme-secondary-200', lightenColor(themeConfig.secondaryColor, 0.6) || '#e2e8f0');
     setCssVar('--theme-secondary-700', darkenColor(themeConfig.secondaryColor, 0.4) || '#334155');
@@ -182,20 +169,14 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     
     // Apply custom CSS if provided
     if (themeConfig.customCSS) {
-      // Check if the style element already exists
       let styleElement = document.getElementById('custom-theme-css');
-      
       if (!styleElement) {
-        // Create a new style element if it doesn't exist
         styleElement = document.createElement('style');
         styleElement.id = 'custom-theme-css';
         document.head.appendChild(styleElement);
       }
-      
-      // Update the content
       styleElement.textContent = themeConfig.customCSS;
     }
-
     console.log('Theme applied to DOM successfully');
   };
 
@@ -206,25 +187,16 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       document.documentElement.style.setProperty(name, value);
     }
   };
-  
+
   // Helper to load Google Fonts
   const loadCustomFont = (fontFamily) => {
-    // Skip if running on server
     if (typeof document === 'undefined') return;
-    
-    // Extract font name
     const fontName = fontFamily.split(',')[0].trim().replace(/['"]/g, '');
-    
-    // Skip system fonts
     if (['system-ui', 'sans-serif', 'serif', 'monospace', 'Arial', 'Helvetica', 'Times New Roman'].includes(fontName)) {
       return;
     }
-    
-    // Check if already loaded
     const existingLink = document.querySelector(`link[href*="${fontName}"]`);
     if (existingLink) return;
-    
-    // Load Google Font
     const link = document.createElement('link');
     link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
     link.rel = 'stylesheet';
@@ -234,36 +206,24 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   // Helper to lighten a color
   const lightenColor = (color, factor) => {
     if (!color || !color.startsWith('#')) return null;
-    
-    // Convert hex to RGB
     let r = parseInt(color.slice(1, 3), 16);
     let g = parseInt(color.slice(3, 5), 16);
     let b = parseInt(color.slice(5, 7), 16);
-    
-    // Lighten
     r = Math.min(255, Math.round(r + (255 - r) * factor));
     g = Math.min(255, Math.round(g + (255 - g) * factor));
     b = Math.min(255, Math.round(b + (255 - b) * factor));
-    
-    // Convert back to hex
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   };
 
   // Helper to darken a color
   const darkenColor = (color, factor) => {
     if (!color || !color.startsWith('#')) return null;
-    
-    // Convert hex to RGB
     let r = parseInt(color.slice(1, 3), 16);
     let g = parseInt(color.slice(3, 5), 16);
     let b = parseInt(color.slice(5, 7), 16);
-    
-    // Darken
     r = Math.max(0, Math.round(r * (1 - factor)));
     g = Math.max(0, Math.round(g * (1 - factor)));
     b = Math.max(0, Math.round(b * (1 - factor)));
-    
-    // Convert back to hex
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   };
 
@@ -275,7 +235,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
         mode,
         toggleMode,
         updateTheme,
-        loadTheme
+        loadTheme,
       }}
     >
       {children}

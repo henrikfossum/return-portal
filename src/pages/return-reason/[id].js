@@ -15,9 +15,7 @@ export default function ReturnReason() {
   const { 
     order, 
     itemsToReturn, 
-    setItemReturnReason, 
-    loading,
-    error
+    setItemReturnReason
   } = useReturnFlow();
   const { settings } = useTenantSettings();
   const [selectedReason, setSelectedReason] = useState('');
@@ -34,7 +32,8 @@ export default function ReturnReason() {
     if (router.isReady && (!order || !currentItem)) {
       router.replace('/');
     }
-  }, [order, currentItem, router.isReady]);
+  }, [router, order, currentItem]);
+  
 
   // Handle back button
   const handleBack = () => {
@@ -54,13 +53,14 @@ export default function ReturnReason() {
 
   // Get the return reasons from settings
   const defaultReasons = [
-    'Doesn\'t fit',
+    'Doesn&apos;t fit',
     'Changed my mind',
     'Product damaged',
     'Incorrect item received',
     'Quality not as expected',
     'Other'
   ];
+  
   
   // Use tenant settings if available, otherwise use defaults
   const returnReasons = settings?.returnReasons || defaultReasons;

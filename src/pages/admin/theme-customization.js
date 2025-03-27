@@ -291,7 +291,7 @@ const handleSave = async () => {
               {settings.logo && (
                 <div className="mt-2 p-4 bg-gray-50 rounded-md">
                   <p className="text-sm mb-2">Logo Preview:</p>
-                  <img 
+                  <Image 
                     src={settings.logo} 
                     alt="Logo Preview" 
                     className="max-h-16 object-contain"

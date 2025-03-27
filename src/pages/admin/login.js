@@ -1,4 +1,3 @@
-// src/pages/admin/login.js
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -13,7 +12,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const { data: session, status } = useSession();
+  // Destructure to a variable ("status") that is used in the component
+  const { data: status } = useSession();
   
   // Redirect if already authenticated
   useEffect(() => {
@@ -42,6 +42,8 @@ export default function AdminLogin() {
         router.push('/admin');
       }
     } catch (err) {
+      // Log the error so that "err" is used
+      console.error(err);
       setError('An unexpected error occurred');
       setLoading(false);
     }

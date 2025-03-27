@@ -52,7 +52,7 @@ export default function ProductCard({
         {/* Product image */}
         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
           {imageUrl ? (
-            <img
+            <Image
               src={imageUrl}
               alt={product.title || product.name}
               className="w-full h-full object-cover"

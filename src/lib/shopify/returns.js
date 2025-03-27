@@ -1,7 +1,7 @@
 // src/lib/shopify/returns.js (Enhanced version)
 import { createApiError, ErrorTypes } from '@/lib/api/errorHandler';
 import { graphqlClient, client as restClient } from './client';
-import { analyzeReturnFraud, getSettings } from '@/lib/fraud/detection';
+import { getSettings } from '@/lib/fraud/detection';
 
 /**
  * Process a return for a specific line item
@@ -38,9 +38,6 @@ export async function processReturn(orderId, lineItemId, quantity = 1) {
     : `gid://shopify/LineItem/${lineItemId}`;
 
   try {
-    // Step 1: Verify order exists and can be refunded
-    const orderData = await verifyOrderEligibility(orderId);
-    
     // Step 2: Check if item is eligible for return
     await verifyItemEligibility(orderId, lineItemId, qty);
     

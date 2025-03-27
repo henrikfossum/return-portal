@@ -251,38 +251,126 @@ export default async function handler(req, res) {
     
     // Only attempt to fetch images if we have variant IDs
     if (productVariantIds.length > 0) {
-      console.log(`Attempting to fetch images for ${productVariantIds.length} variants`);
+      console.log(`Fetching images for ${productVariantIds.length} variants`);
       
-      // Try to fetch images with error handling
       try {
-        // GraphQL query for images if available
-        if (gqlClient && typeof gqlClient.request === 'function') {
+        // First attempt: Use GraphQL if available (more efficient)
+        if (gqlClient) {
           try {
-            // GraphQL image fetching logic
-            // ...
+            const productsQuery = `
+              query GetProductImages($ids: [ID!]!) {
+                nodes(ids: $ids) {
+                  ... on ProductVariant {
+                    id
+                    image {
+                      url
+                    }
+                    product {
+                      images(first: 1) {
+                        edges {
+                          node {
+                            url
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            // Convert variant IDs to GraphQL global IDs
+            const variantGlobalIds = productVariantIds.map(id => 
+              `gid://shopify/ProductVariant/${id}`
+            );
+            
+            const response = await gqlClient.query({
+              data: {
+                query: productsQuery,
+                variables: { ids: variantGlobalIds }
+              }
+            });
+            
+            if (response.body?.data?.nodes) {
+              const nodes = response.body.data.nodes;
+              nodes.forEach(node => {
+                if (node) {
+                  // Extract variant ID from global ID
+                  const idParts = node.id.split('/');
+                  const variantId = idParts[idParts.length - 1];
+                  
+                  // Get image URL from variant or product
+                  let imageUrl = null;
+                  if (node.image?.url) {
+                    imageUrl = node.image.url;
+                  } else if (node.product?.images?.edges?.length > 0) {
+                    imageUrl = node.product.images.edges[0].node.url;
+                  }
+                  
+                  if (imageUrl && variantId) {
+                    variantImages[variantId] = imageUrl;
+                  }
+                }
+              });
+              
+              console.log(`Successfully fetched ${Object.keys(variantImages).length} images via GraphQL`);
+            }
           } catch (graphqlError) {
             console.error('Error fetching variant images via GraphQL:', graphqlError);
           }
         }
         
-        // Fallback to REST API for images
-        if (Object.keys(variantImages).length === 0) {
+        // Second attempt: Fallback to REST API if GraphQL didn't get all images
+        if (Object.keys(variantImages).length < productVariantIds.length) {
           try {
-            // REST API image fetching logic
-            // ...
+            // For each variant without an image, fetch the product to get its images
+            const variantsToFetch = productVariantIds.filter(id => !variantImages[id]);
+            
+            if (variantsToFetch.length > 0) {
+              console.log(`Fetching ${variantsToFetch.length} missing images via REST API`);
+              
+              // Use Promise.all to fetch multiple variants in parallel
+              await Promise.all(variantsToFetch.map(async (variantId) => {
+                try {
+                  // First get the variant details to find its product ID
+                  const variantResponse = await client.get({
+                    path: `variants/${variantId}`
+                  });
+                  
+                  if (variantResponse.body?.variant?.product_id) {
+                    const productId = variantResponse.body.variant.product_id;
+                    
+                    // Then fetch the product to get its images
+                    const productResponse = await client.get({
+                      path: `products/${productId}`
+                    });
+                    
+                    if (productResponse.body?.product?.images?.length > 0) {
+                      // Use the first product image as fallback
+                      variantImages[variantId] = productResponse.body.product.images[0].src;
+                    }
+                  }
+                } catch (error) {
+                  console.error(`Error fetching details for variant ${variantId}:`, error);
+                }
+              }));
+              
+              console.log(`Successfully fetched ${Object.keys(variantImages).length} total images`);
+            }
           } catch (restError) {
             console.error('Error in REST API fallback:', restError);
           }
         }
       } catch (imageError) {
         console.error('Error fetching product images:', imageError);
-        // Continue without images - non-fatal error
       }
     }
 
     // Enrich eligible items with additional image fields and eligibility info
     const enrichedItems = eligibleItems.map(item => {
-      const imageUrl = variantImages[item.variant_id] || null;
+      const imageUrl = variantImages[item.variant_id] || 
+                      getDefaultProductImage(order) || 
+                      '/placeholder-product.jpg';
       return {
         ...item,
         imageUrl: imageUrl,
@@ -292,6 +380,20 @@ export default async function handler(req, res) {
         eligibilityStatus: 'eligible'
       };
     });
+
+    // Helper function to get a default image from any part of the order
+    function getDefaultProductImage(order) {
+      // Check if the order has a line items array
+      if (order && order.line_items && order.line_items.length > 0) {
+        // Look through all line items for an image
+        for (const item of order.line_items) {
+          if (item.image && item.image.src) {
+            return item.image.src;
+          }
+        }
+      }
+      return null;
+    }
 
     // Add ineligible items with reason (but don't make them selectable)
     const ineligibleEnrichedItems = ineligibleItems.map(item => {

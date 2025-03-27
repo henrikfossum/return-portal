@@ -55,7 +55,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]); // Recreate only when tenantId changes
+  }, [tenantId, applyThemeToDom]); // ✅ Now applyThemeToDom is in scope
 
   // Load theme when component mounts or tenantId changes
   useEffect(() => {

@@ -111,7 +111,7 @@ export default function ReturnReason() {
         <div className="mb-6">
           <h2 className="text-xl font-medium text-gray-900">Why Are You Returning This Item?</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Please tell us the reason you're returning this item
+            Please tell us the reason you&apos;re returning this item
           </p>
         </div>
         

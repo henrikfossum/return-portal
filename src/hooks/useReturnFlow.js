@@ -75,7 +75,7 @@ export function useReturnFlow() {
     if (!order) return;
     
     const items = Object.entries(selectedItems)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([, qty]) => qty > 0)
       .map(([itemId, quantity]) => {
         const item = order.line_items.find(i => i.id.toString() === itemId);
         if (!item) return null;

@@ -157,7 +157,7 @@ export default function OrderDetails() {
           />
           
           <p className="text-sm text-gray-700 mt-4">
-            Choose the items you'd like to return or exchange. Only eligible items can be selected.
+            Choose the items you&apos;d like to return or exchange. Only eligible items can be selected.
           </p>
         </div>
         

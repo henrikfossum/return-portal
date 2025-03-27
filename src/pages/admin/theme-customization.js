@@ -5,6 +5,7 @@ import AdminLayout from '@/components/admin/Layout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { useAdmin } from '@/lib/context/AdminContext';
+import Image from 'next/image';
 
 export default function ThemeCustomization() {
   const { authFetch } = useAdmin();

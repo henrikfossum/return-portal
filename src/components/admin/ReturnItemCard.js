@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Package, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import Image from 'next/image';
 
 export default function ReturnItemCard({ 
   item, 

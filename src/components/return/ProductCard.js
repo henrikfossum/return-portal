@@ -2,6 +2,7 @@
 import React from 'react';
 import { Package } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import Image from 'next/image';
 
 export default function ProductCard({
   product,

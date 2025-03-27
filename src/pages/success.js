@@ -86,7 +86,7 @@ export default function Success() {
                 <div>
                   <p className="font-medium text-gray-900">Check your email</p>
                   <p className="text-sm text-gray-600 mt-1">
-                    You'll receive a confirmation email with a shipping label and instructions.
+                    You&apos;ll receive a confirmation email with a shipping label and instructions.
                   </p>
                 </div>
               </li>

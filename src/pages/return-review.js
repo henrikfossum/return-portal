@@ -10,7 +10,6 @@ import {
   Package
 } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
-import { useTenantTheme } from '@/lib/tenant/hooks';
 import { useTenantSettings } from '@/lib/tenant/hooks';
 import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';

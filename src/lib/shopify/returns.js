@@ -38,6 +38,9 @@ export async function processReturn(orderId, lineItemId, quantity = 1) {
     : `gid://shopify/LineItem/${lineItemId}`;
 
   try {
+
+    await verifyOrderEligibility(orderId);
+
     // Step 2: Check if item is eligible for return
     await verifyItemEligibility(orderId, lineItemId, qty);
     

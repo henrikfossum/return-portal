@@ -2,34 +2,62 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { signIn, useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { useAdmin } from '@/lib/context/AdminContext';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
-  const { login, isAuthenticated, loading, error } = useAdmin();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  
+  // Redirect if already authenticated
   useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated && !loading) {
+    if (status === 'authenticated') {
       router.replace('/admin');
     }
-  }, [isAuthenticated, loading, router]);
+  }, [status, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
     
-    const success = await login(email, password);
-    if (success) {
-      router.push('/admin');
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password
+      });
+      
+      if (result.error) {
+        setError('Invalid email or password');
+        setLoading(false);
+      } else {
+        // NextAuth will handle the redirect
+        router.push('/admin');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      setLoading(false);
     }
   };
 
-  // If already authenticated, don't render login form
-  if (isAuthenticated && !loading) {
+  // If still checking authentication status, show loading
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // If authenticated, don't render login form (will redirect)
+  if (status === 'authenticated') {
     return null;
   }
 
@@ -62,7 +90,6 @@ export default function AdminLogin() {
                   placeholder="admin@example.com"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">For demo: admin@example.com</p>
               </div>
               
               <div>
@@ -75,10 +102,8 @@ export default function AdminLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="password123"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">For demo: password123</p>
               </div>
             </div>
             

@@ -1,6 +1,6 @@
 // src/lib/i18n/locales/en.js
-export default {
-    common: {
+const enTranslations = {
+  common: {
       back: 'Back',
       continue: 'Continue',
       submit: 'Submit',
@@ -107,3 +107,5 @@ export default {
       },
     },
   };
+
+  export default enTranslations;

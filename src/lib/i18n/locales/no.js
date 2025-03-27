@@ -1,6 +1,6 @@
 // src/lib/i18n/locales/no.js
-export default {
-    common: {
+const noTranslations = {
+  common: {
       back: 'Tilbake',
       continue: 'Fortsett',
       submit: 'Send inn',
@@ -107,3 +107,5 @@ export default {
       },
     },
   };
+
+  export default noTranslations;

@@ -1,6 +1,6 @@
 // src/components/return/ReturnPolicyInfo.js
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle, XCircle, ChevronDown, ChevronUp, Info, Clock, RefreshCw, DollarSign } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronDown, ChevronUp, Info, Clock, RefreshCw, DollarSign } from 'lucide-react';
 import { useTenantTheme } from '@/lib/tenant/hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,7 +32,6 @@ export default function ReturnPolicyInfo({
   // Count eligible vs ineligible items
   const totalItems = (eligibleItems?.length || 0) + (ineligibleItems?.length || 0);
   const eligibleCount = eligibleItems?.length || 0;
-  const ineligibleCount = ineligibleItems?.length || 0;
   
   // Detect if this is an order-specific policy or general
   const isOrderSpecific = !!order;

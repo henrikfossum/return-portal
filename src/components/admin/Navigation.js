@@ -26,7 +26,6 @@ export default function Navigation() {
   
   // Get theme colors or fallback values
   const primaryColor = theme?.primaryColor || '#4f46e5';
-  const textColor = theme?.textColor || '#111827';
   const borderColor = theme?.borderColor || '#e5e7eb';
   
   const navItems = [

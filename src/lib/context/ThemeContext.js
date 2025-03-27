@@ -27,7 +27,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   useEffect(() => {
     console.log('ThemeProvider: Loading theme for tenant', tenantId);
     loadTheme();
-  }, [tenantId]);
+  }, [tenantId, loadTheme]); 
 
   // Toggle between light and dark mode
   const toggleMode = useCallback(() => {

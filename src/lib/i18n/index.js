@@ -110,8 +110,7 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
 }
 
 // Helper function to format dates according to locale
-export function formatDate(date, options = {}) {
-  const { locale } = useLocale();
+export function formatDate(date, locale = 'en', options = {}) {
   return new Date(date).toLocaleDateString(locale, options);
 }
 

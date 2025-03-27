@@ -6,7 +6,6 @@ import { LogOut, LayoutDashboard } from 'lucide-react';
 import { useAdmin } from '@/lib/context/AdminContext';
 
 export default function Header() {
-  const router = useRouter();
   const { user, logout } = useAdmin();
 
   const handleLogout = () => {

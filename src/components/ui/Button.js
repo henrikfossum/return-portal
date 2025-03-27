@@ -98,7 +98,7 @@ export default function Button({
   };
 
   // Helper function to darken/lighten colors
-  const adjustColor = (color, amount) => {
+  const adjustColor = (color) => {
     // Simple implementation; in a real app you would use a proper color library
     return color; // For now, just return the original color
   };

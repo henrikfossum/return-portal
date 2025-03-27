@@ -23,7 +23,6 @@ export default function ReturnLayout({
   onBackClick = null,
   className = '',
   hideProgressSteps = false,
-  tenantId = 'default'
 }) {
   const { theme, loading: themeLoading } = useTheme();
   const { t, locale, supportedLocales, changeLocale } = useLocale();

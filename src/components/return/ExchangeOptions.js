@@ -5,22 +5,17 @@ import { RefreshCw, AlertCircle, Check } from 'lucide-react';
 export default function ExchangeOptions({ 
   product, 
   onExchangeDetailsChange,
-  initialDetails = null
 }) {
   // State for loading and error handling
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   // State for product data
-  const [productData, setProductData] = useState(null);
   const [variants, setVariants] = useState([]);
   
   // State for option types and values
-  const [optionTypes, setOptionTypes] = useState([]);
   const [sizeOptions, setSizeOptions] = useState([]);
-  const [colorOptions, setColorOptions] = useState([]);
-  const [otherOptions, setOtherOptions] = useState({});
-  
+
   // State for current selections
   const [originalOptions, setOriginalOptions] = useState({
     size: '',

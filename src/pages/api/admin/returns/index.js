@@ -1,35 +1,13 @@
 // src/pages/api/admin/returns/index.js
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
-// Simple in-memory cache for orders
-let ordersCache = {
+// In-memory cache for API responses
+let apiCache = {
+  key: null,
   data: null,
   timestamp: null,
-  expiresIn: 5 * 60 * 1000 // 5 minutes cache
+  expiresIn: 15 * 1000 // 15 second cache
 };
-
-// Simple rate limiter to prevent Shopify throttling
-let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 500; // 500ms = 2 requests/second max
-
-// Utility for rate-limited API requests
-async function rateLimitedRequest(requestFn) {
-  const now = Date.now();
-  const timeElapsed = now - lastRequestTime;
-  
-  // If we've made a request too recently, wait before making another
-  if (timeElapsed < MIN_REQUEST_INTERVAL) {
-    await new Promise(resolve => 
-      setTimeout(resolve, MIN_REQUEST_INTERVAL - timeElapsed)
-    );
-  }
-  
-  // Record this request time
-  lastRequestTime = Date.now();
-  
-  // Execute the request
-  return requestFn();
-}
 
 export default async function handler(req, res) {
   // Check for admin authorization
@@ -46,80 +24,49 @@ export default async function handler(req, res) {
   // Handle GET method (fetch returns)
   if (req.method === 'GET') {
     try {
+      console.log("Index route handler called for returns");
       const { status, dateRange, page = 1, limit = 10, search } = req.query;
+      
+      // Generate a cache key based on request parameters
+      const cacheKey = JSON.stringify({ 
+        tenantId, 
+        status, 
+        dateRange, 
+        page, 
+        limit, 
+        search 
+      });
+      
+      // Check for a valid cached response
+      const now = Date.now();
+      if (apiCache.key === cacheKey && 
+          apiCache.data && 
+          apiCache.timestamp && 
+          (now - apiCache.timestamp < apiCache.expiresIn)) {
+        // Use cached response
+        console.log('Using cached API response');
+        return res.status(200).json(apiCache.data);
+      }
       
       // Get Shopify client
       const shopifyClients = await getShopifyClientForTenant(tenantId);
       const client = shopifyClients.rest;
       
-      // Check if we have a valid cache
-      let allOrders = [];
-      const now = Date.now();
+      console.log("Fetching orders from Shopify");
       
-      if (ordersCache.data && ordersCache.timestamp && 
-          (now - ordersCache.timestamp < ordersCache.expiresIn)) {
-        // Use cached data
-        allOrders = ordersCache.data;
-        console.log('Using cached orders data');
-      } else {
-        // Cache is invalid or expired, fetch new data
-        console.log("Fetching orders from Shopify");
-        
-        try {
-          // Use rate-limited request
-          const { body } = await rateLimitedRequest(() => 
-            client.get({
-              path: 'orders',
-              query: {
-                status: 'any',
-                limit: 250, // Maximum allowed by Shopify API
-              }
-            })
-          );
-          
-          allOrders = body.orders || [];
-          
-          // Update cache
-          ordersCache = {
-            data: allOrders,
-            timestamp: now,
-            expiresIn: 5 * 60 * 1000 // 5 minutes
-          };
-          
-          console.log(`Retrieved ${allOrders.length} orders`);
-        } catch (error) {
-          console.error('Shopify API error:', error.message);
-          
-          // If throttling error, retry after delay
-          if (error.message && error.message.includes('throttling')) {
-            console.log('Rate limit exceeded, waiting for 2 seconds...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Retry after waiting
-            const { body } = await client.get({
-              path: 'orders',
-              query: {
-                status: 'any',
-                limit: 250,
-              }
-            });
-            
-            allOrders = body.orders || [];
-            
-            // Update cache
-            ordersCache = {
-              data: allOrders,
-              timestamp: now,
-              expiresIn: 5 * 60 * 1000
-            };
-          } else {
-            // For other errors, rethrow
-            throw error;
-          }
+      // Fetch orders with status "any" to include all possible returns
+      const { body } = await client.get({
+        path: 'orders',
+        query: {
+          status: 'any',
+          limit: 250, // Maximum allowed by Shopify API
         }
-      }
+      });
       
-      // Process orders to find returns (keeping this logic the same)
+      const allOrders = body.orders || [];
+      console.log(`Retrieved ${allOrders.length} orders`);
+      
+      // Process orders to find returns
       const returnsData = allOrders
         .filter(order => {
           const tagsArray = order.tags
@@ -129,7 +76,7 @@ export default async function handler(req, res) {
           const orderNote = order.note?.toLowerCase() || '';
           const financialStatus = order.financial_status?.toLowerCase() || '';
             
-          // Check for any return-related indicators
+          // Check for any return-related indicators:
           const hasRefunds = order.refunds && order.refunds.length > 0;
           
           const returnKeywords = ['return', 'retur', 'bytte', 'exchange', 'refund', 'refusjon'];
@@ -163,7 +110,6 @@ export default async function handler(req, res) {
         })
         .map(order => {
           try {
-            // (Rest of the mapping logic remains the same)
             const tagsArray = order.tags
               ? order.tags.split(',').map(tag => tag.trim().toLowerCase())
               : [];
@@ -272,7 +218,7 @@ export default async function handler(req, res) {
         
       console.log(`Found ${returnsData.length} returns`);
 
-      // Apply filters (same logic as before)
+      // Apply filters
       let filteredReturns = returnsData;
 
       if (status && status !== 'all') {
@@ -315,8 +261,8 @@ export default async function handler(req, res) {
       const endIndex = parseInt(page) * parseInt(limit);
       const paginatedReturns = filteredReturns.slice(startIndex, endIndex);
       
-      // Return summary statistics
-      return res.status(200).json({
+      // Prepare response object
+      const responseData = {
         returns: paginatedReturns,
         total: filteredReturns.length,
         page: parseInt(page),
@@ -330,13 +276,23 @@ export default async function handler(req, res) {
           flaggedReturns: returnsData.filter(r => r.status === 'flagged').length,
           rejectedReturns: returnsData.filter(r => r.status === 'rejected').length
         }
-      });
+      };
+      
+      // Cache this response
+      apiCache = {
+        key: cacheKey,
+        data: responseData,
+        timestamp: Date.now(),
+        expiresIn: 15 * 1000 // 15 seconds cache
+      };
+      
+      return res.status(200).json(responseData);
       
     } catch (err) {
       console.error('Error fetching admin returns:', err);
       return res.status(500).json({
         error: 'Server Error',
-        message: `Error fetching admin returns: ${err.message}`,
+        message: 'An error occurred while processing your request',
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }

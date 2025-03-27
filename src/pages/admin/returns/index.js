@@ -1,5 +1,5 @@
 // src/pages/admin/returns/index.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { Search, Filter, Download, AlertTriangle, CheckCircle, Package, RefreshCw, Clock } from 'lucide-react';
@@ -28,21 +28,23 @@ export default function ReturnsManagement() {
   const [searchInput, setSearchInput] = useState('');
   const [selectedTab, setSelectedTab] = useState('all'); // 'all', 'flagged', 'pending'
 
-  // Effect to update filters when tab changes
-  useEffect(() => {
-    if (selectedTab === 'all') {
-      updateFilters({ status: 'all' });
-    } else if (selectedTab === 'flagged') {
-      updateFilters({ status: 'flagged' });
-    } else if (selectedTab === 'pending') {
-      updateFilters({ status: 'pending' });
-    } else if (selectedTab === 'manual') {
-      // For returns that need manual handling
-      // This would ideally be a server-side filter, but for now we can just fetch all
-      // and then filter client-side for anything flagged
-      updateFilters({ status: 'flagged' });
-    }
-  }, [selectedTab, updateFilters]);
+  // Memoize tab selection handler to prevent unnecessary renders
+  const handleTabChange = useCallback((tabName) => {
+    setSelectedTab(tabName);
+    // Wait for React to update the state before calling filter updates
+    setTimeout(() => {
+      if (tabName === 'all') {
+        updateFilters({ status: 'all' });
+      } else if (tabName === 'flagged') {
+        updateFilters({ status: 'flagged' });
+      } else if (tabName === 'pending') {
+        updateFilters({ status: 'pending' });
+      } else if (tabName === 'manual') {
+        // For returns that need manual handling
+        updateFilters({ status: 'flagged' });
+      }
+    }, 0);
+  }, [updateFilters]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -446,7 +448,7 @@ export default function ReturnsManagement() {
         <div className="border-b border-gray-200 mb-6">
           <div className="flex -mb-px">
             <button
-              onClick={() => setSelectedTab('all')}
+              onClick={() => handleTabChange('all')}
               className={`mr-1 py-2 px-4 text-sm font-medium ${
                 selectedTab === 'all'
                   ? 'border-b-2 border-blue-500 text-blue-600'
@@ -456,7 +458,7 @@ export default function ReturnsManagement() {
               All Returns
             </button>
             <button
-              onClick={() => setSelectedTab('pending')}
+              onClick={() => handleTabChange('pending')}
               className={`mr-1 py-2 px-4 text-sm font-medium ${
                 selectedTab === 'pending'
                   ? 'border-b-2 border-blue-500 text-blue-600'
@@ -466,7 +468,7 @@ export default function ReturnsManagement() {
               Pending ({stats.pendingReturns})
             </button>
             <button
-              onClick={() => setSelectedTab('flagged')}
+              onClick={() => handleTabChange('flagged')}
               className={`mr-1 py-2 px-4 text-sm font-medium ${
                 selectedTab === 'flagged'
                   ? 'border-b-2 border-blue-500 text-blue-600'
@@ -476,7 +478,7 @@ export default function ReturnsManagement() {
               Flagged ({stats.flaggedReturns})
             </button>
             <button
-              onClick={() => setSelectedTab('manual')}
+              onClick={() => handleTabChange('manual')}
               className={`mr-1 py-2 px-4 text-sm font-medium ${
                 selectedTab === 'manual'
                   ? 'border-b-2 border-blue-500 text-blue-600'

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/admin/login.js
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react'; // Correct import
+import { useSession } from 'next-auth/react'; // Correct import
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
@@ -12,8 +14,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  // Use status directly to avoid unused variable warning
-  const { status } = useSession();
+  const { data: session, status } = useSession(); // Correct usage
   
   // Redirect if already authenticated
   useEffect(() => {

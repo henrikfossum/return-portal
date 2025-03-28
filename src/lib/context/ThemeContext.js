@@ -21,104 +21,55 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('light'); // 'light' or 'dark'
 
-  // Wrap loadTheme in useCallback so its reference remains stable
-  const loadTheme = useCallback(async () => {
-    try {
-      console.log('Loading theme - Start');
-      setLoading(true);
-      const themeConfig = await getTenantTheme(tenantId);
-      
-      console.group('Theme Loading');
-      console.log('Tenant ID:', tenantId);
-      console.log('Loaded Theme Config:', themeConfig);
-      
-      if (themeConfig) {
-        // Log each theme property
-        Object.entries(themeConfig).forEach(([key, value]) => {
-          console.log(`Theme Property - ${key}:`, value);
-        });
-
-        setTheme(themeConfig);
-        applyThemeToDom(themeConfig);
-
-        // Load custom fonts if needed
-        if (themeConfig.fontFamily) {
-          console.log('Loading font:', themeConfig.fontFamily);
-          loadCustomFont(themeConfig.fontFamily);
-        }
-      } else {
-        console.warn('No theme configuration found');
-      }
-      console.groupEnd();
-    } catch (error) {
-      console.error('Error loading theme:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, applyThemeToDom]); // ✅ Now applyThemeToDom is in scope
-
-  // Load theme when component mounts or tenantId changes
-  useEffect(() => {
-    console.log('ThemeProvider: Loading theme for tenant', tenantId);
-    loadTheme();
-  }, [tenantId, loadTheme]);
-
-  // Toggle between light and dark mode
-  const toggleMode = useCallback(() => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setMode(newMode);
-    
-    if (newMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    
-    localStorage.setItem('colorMode', newMode);
-  }, [mode]);
-  
-  // Check for saved color mode preference when component mounts
-  useEffect(() => {
-    const savedMode =
-      localStorage.getItem('colorMode') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    
-    if (savedMode === 'dark') {
-      setMode('dark');
-      document.documentElement.classList.add('dark');
+  // Helper to set CSS variables
+  const setCssVar = useCallback((name, value) => {
+    console.log(`Setting CSS variable ${name} to ${value}`);
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(name, value);
     }
   }, []);
 
-  // Update theme settings and apply changes
-  const updateTheme = async (newThemeSettings) => {
-    try {
-      setLoading(true);
-      
-      console.log('Updating theme with:', newThemeSettings);
-      
-      const updatedTheme = {
-        ...theme,
-        ...newThemeSettings,
-      };
-      
-      setTheme(updatedTheme);
-      applyThemeToDom(updatedTheme);
-      
-      if (newThemeSettings.fontFamily && newThemeSettings.fontFamily !== theme?.fontFamily) {
-        loadCustomFont(newThemeSettings.fontFamily);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error updating theme:', error);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Helper to lighten a color
+  const lightenColor = useCallback((color, factor) => {
+    if (!color || !color.startsWith('#')) return null;
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
+    r = Math.min(255, Math.round(r + (255 - r) * factor));
+    g = Math.min(255, Math.round(g + (255 - g) * factor));
+    b = Math.min(255, Math.round(b + (255 - b) * factor));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }, []);
 
-  // Apply theme to DOM by setting CSS variables
-  const applyThemeToDom = (themeConfig) => {
+  // Helper to darken a color
+  const darkenColor = useCallback((color, factor) => {
+    if (!color || !color.startsWith('#')) return null;
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
+    r = Math.max(0, Math.round(r * (1 - factor)));
+    g = Math.max(0, Math.round(g * (1 - factor)));
+    b = Math.max(0, Math.round(b * (1 - factor)));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }, []);
+
+  // Helper to load Google Fonts
+  const loadCustomFont = useCallback((fontFamily) => {
+    if (typeof document === 'undefined') return;
+    const fontName = fontFamily.split(',')[0].trim().replace(/['"]/g, '');
+    if (['system-ui', 'sans-serif', 'serif', 'monospace', 'Arial', 'Helvetica', 'Times New Roman'].includes(fontName)) {
+      return;
+    }
+    const existingLink = document.querySelector(`link[href*="${fontName}"]`);
+    if (existingLink) return;
+    const link = document.createElement('link');
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }, []);
+
+  // Apply theme to DOM by setting CSS variables - wrap in useCallback
+  const applyThemeToDom = useCallback((themeConfig) => {
     console.log('Applying theme to DOM:', themeConfig);
     if (!themeConfig || typeof document === 'undefined') return;
     
@@ -178,53 +129,102 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       styleElement.textContent = themeConfig.customCSS;
     }
     console.log('Theme applied to DOM successfully');
-  };
+  }, [setCssVar, lightenColor, darkenColor]);
 
-  // Helper to set CSS variables
-  const setCssVar = (name, value) => {
-    console.log(`Setting CSS variable ${name} to ${value}`);
-    if (typeof document !== 'undefined') {
-      document.documentElement.style.setProperty(name, value);
+  // Wrap loadTheme in useCallback so its reference remains stable
+  const loadTheme = useCallback(async () => {
+    try {
+      console.log('Loading theme - Start');
+      setLoading(true);
+      const themeConfig = await getTenantTheme(tenantId);
+      
+      console.group('Theme Loading');
+      console.log('Tenant ID:', tenantId);
+      console.log('Loaded Theme Config:', themeConfig);
+      
+      if (themeConfig) {
+        // Log each theme property
+        Object.entries(themeConfig).forEach(([key, value]) => {
+          console.log(`Theme Property - ${key}:`, value);
+        });
+
+        setTheme(themeConfig);
+        applyThemeToDom(themeConfig);
+
+        // Load custom fonts if needed
+        if (themeConfig.fontFamily) {
+          console.log('Loading font:', themeConfig.fontFamily);
+          loadCustomFont(themeConfig.fontFamily);
+        }
+      } else {
+        console.warn('No theme configuration found');
+      }
+      console.groupEnd();
+    } catch (error) {
+      console.error('Error loading theme:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [tenantId, applyThemeToDom, loadCustomFont]);
 
-  // Helper to load Google Fonts
-  const loadCustomFont = (fontFamily) => {
-    if (typeof document === 'undefined') return;
-    const fontName = fontFamily.split(',')[0].trim().replace(/['"]/g, '');
-    if (['system-ui', 'sans-serif', 'serif', 'monospace', 'Arial', 'Helvetica', 'Times New Roman'].includes(fontName)) {
-      return;
+  // Load theme when component mounts or tenantId changes
+  useEffect(() => {
+    console.log('ThemeProvider: Loading theme for tenant', tenantId);
+    loadTheme();
+  }, [tenantId, loadTheme]);
+
+  // Toggle between light and dark mode
+  const toggleMode = useCallback(() => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    
+    if (newMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    const existingLink = document.querySelector(`link[href*="${fontName}"]`);
-    if (existingLink) return;
-    const link = document.createElement('link');
-    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-  };
+    
+    localStorage.setItem('colorMode', newMode);
+  }, [mode]);
+  
+  // Check for saved color mode preference when component mounts
+  useEffect(() => {
+    const savedMode =
+      localStorage.getItem('colorMode') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    
+    if (savedMode === 'dark') {
+      setMode('dark');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
 
-  // Helper to lighten a color
-  const lightenColor = (color, factor) => {
-    if (!color || !color.startsWith('#')) return null;
-    let r = parseInt(color.slice(1, 3), 16);
-    let g = parseInt(color.slice(3, 5), 16);
-    let b = parseInt(color.slice(5, 7), 16);
-    r = Math.min(255, Math.round(r + (255 - r) * factor));
-    g = Math.min(255, Math.round(g + (255 - g) * factor));
-    b = Math.min(255, Math.round(b + (255 - b) * factor));
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-  };
-
-  // Helper to darken a color
-  const darkenColor = (color, factor) => {
-    if (!color || !color.startsWith('#')) return null;
-    let r = parseInt(color.slice(1, 3), 16);
-    let g = parseInt(color.slice(3, 5), 16);
-    let b = parseInt(color.slice(5, 7), 16);
-    r = Math.max(0, Math.round(r * (1 - factor)));
-    g = Math.max(0, Math.round(g * (1 - factor)));
-    b = Math.max(0, Math.round(b * (1 - factor)));
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  // Update theme settings and apply changes
+  const updateTheme = async (newThemeSettings) => {
+    try {
+      setLoading(true);
+      
+      console.log('Updating theme with:', newThemeSettings);
+      
+      const updatedTheme = {
+        ...theme,
+        ...newThemeSettings,
+      };
+      
+      setTheme(updatedTheme);
+      applyThemeToDom(updatedTheme);
+      
+      if (newThemeSettings.fontFamily && newThemeSettings.fontFamily !== theme?.fontFamily) {
+        loadCustomFont(newThemeSettings.fontFamily);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating theme:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

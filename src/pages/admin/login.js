@@ -14,7 +14,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const { data: _session, status } = useSession();  
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { data: session, status } = useSession();
   
   // Redirect if already authenticated
   useEffect(() => {

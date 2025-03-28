@@ -13,7 +13,7 @@ export default function AdminLogin() {
   
   const router = useRouter();
   // Destructure to a variable ("status") that is used in the component
-  const { data: status } = useSession();
+  const { data: session, status } = useSession();
   
   // Redirect if already authenticated
   useEffect(() => {

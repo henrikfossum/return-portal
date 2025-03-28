@@ -14,7 +14,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const { data: session, status } = useSession(); // Correct usage
+  const { data: _session, status } = useSession();  
   
   // Redirect if already authenticated
   useEffect(() => {

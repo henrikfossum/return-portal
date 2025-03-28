@@ -132,7 +132,7 @@ export default function ExchangeOptions({
     }
   }, [product, otherOptions]);
 
-  // Find the matching variant when selections change
+  // Find the matching variant when selections change and notify parent
   useEffect(() => {
     if (!variants.length || !selectedSize) return;
     
@@ -152,6 +152,7 @@ export default function ExchangeOptions({
       // Notify the parent component of the exchange details change
       if (onExchangeDetailsChange) {
         onExchangeDetailsChange({
+          productData, // full product data for Shopify actions
           variantId: availableVariant?.id || product.variant_id,
           originalSize: originalOptions.size,
           newSize: selectedSize,
@@ -169,7 +170,8 @@ export default function ExchangeOptions({
     originalOptions, 
     product, 
     onExchangeDetailsChange,
-    selectedVariant
+    selectedVariant,
+    productData
   ]);
 
   // Render loading state

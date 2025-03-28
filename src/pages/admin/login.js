@@ -1,11 +1,10 @@
 // src/pages/admin/login.js
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { signIn } from 'next-auth/react'; // Correct import
-import { useSession } from 'next-auth/react'; // Correct import
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { useAdmin } from '@/lib/context/AdminContext';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -14,15 +13,14 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { data: session, status } = useSession();
+  const { login, isAuthenticated, loading: authLoading } = useAdmin();
   
   // Redirect if already authenticated
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (isAuthenticated) {
       router.replace('/admin');
     }
-  }, [status, router]);
+  }, [isAuthenticated, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -30,29 +28,23 @@ const { data: session, status } = useSession();
     setLoading(true);
     
     try {
-      const result = await signIn('credentials', {
-        redirect: false,
-        email,
-        password
-      });
+      const success = await login(email, password);
       
-      if (result.error) {
-        setError('Invalid email or password');
-        setLoading(false);
-      } else {
-        // NextAuth will handle the redirect
+      if (success) {
         router.push('/admin');
+      } else {
+        setError('Invalid email or password');
       }
     } catch (err) {
-      // Log the error so that "err" is used
       console.error(err);
       setError('An unexpected error occurred');
+    } finally {
       setLoading(false);
     }
   };
 
   // If still checking authentication status, show loading
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -61,7 +53,7 @@ const { data: session, status } = useSession();
   }
 
   // If authenticated, don't render login form (will redirect)
-  if (status === 'authenticated') {
+  if (isAuthenticated) {
     return null;
   }
 
@@ -125,11 +117,4 @@ const { data: session, status } = useSession();
       </div>
     </div>
   );
-}
-
-// This prevents Next.js from trying to prerender this page during build
-export async function getServerSideProps() {
-  return {
-    props: {},
-  };
 }

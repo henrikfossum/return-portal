@@ -12,8 +12,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  // Destructure to a variable ("status") that is used in the component
-  const { data: session, status } = useSession();
+  // Use status directly to avoid unused variable warning
+  const { status } = useSession();
   
   // Redirect if already authenticated
   useEffect(() => {
@@ -123,4 +123,11 @@ export default function AdminLogin() {
       </div>
     </div>
   );
+}
+
+// This prevents Next.js from trying to prerender this page during build
+export async function getServerSideProps() {
+  return {
+    props: {},
+  };
 }

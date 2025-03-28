@@ -10,13 +10,17 @@ export default function ExchangeOptions({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // State for product data
+  // State for full product data (for Shopify actions)
+  const [productData, setProductData] = useState(null);
+  // State for product variants
   const [variants, setVariants] = useState([]);
   
   // State for option types and values
   const [sizeOptions, setSizeOptions] = useState([]);
+  const [colorOptions, setColorOptions] = useState([]);
+  const [otherOptions, setOtherOptions] = useState({});
 
-  // State for current selections
+  // State for current (original) selections
   const [originalOptions, setOriginalOptions] = useState({
     size: '',
     color: '',
@@ -31,7 +35,7 @@ export default function ExchangeOptions({
   // State for the selected variant
   const [selectedVariant, setSelectedVariant] = useState(null);
 
-  // Fetch product variants when component mounts
+  // Fetch product variants (and full product data) when component mounts
   useEffect(() => {
     async function fetchProductVariants() {
       if (!product || !product.product_id) {
@@ -52,6 +56,7 @@ export default function ExchangeOptions({
         }
         
         const data = await response.json();
+        // Save full product data for Shopify actions
         setProductData(data);
         
         // Process variants
@@ -60,14 +65,27 @@ export default function ExchangeOptions({
         }
         
         // Extract size options directly from variants
-        const sizeOptions = data.variants
+        const sizes = data.variants
           .filter(variant => variant.inventory > 0)
           .map(variant => variant.option1)
           .filter((value, index, self) => self.indexOf(value) === index);
   
-        setSizeOptions(sizeOptions);
+        setSizeOptions(sizes);
         
-        // Rest of your existing logic...
+        // Extract color options directly from variants, if available
+        const colors = data.variants
+          .filter(variant => variant.inventory > 0 && variant.option2)
+          .map(variant => variant.option2)
+          .filter((value, index, self) => self.indexOf(value) === index);
+  
+        setColorOptions(colors);
+        
+        // Optionally, set otherOptions if available in the data
+        // For example, if your API returns additional option data:
+        if (data.otherOptions) {
+          setOtherOptions(data.otherOptions);
+        }
+        
       } catch (err) {
         console.error('Error fetching product variants:', err);
         setError('Unable to load product options: ' + err.message);
@@ -77,23 +95,25 @@ export default function ExchangeOptions({
     }
     
     fetchProductVariants();
-  }, [product]); // Only depend on product
+  }, [product]);
 
-  // Parse original variant options
+  // Parse original variant options from the provided product prop
   useEffect(() => {
     if (product && product.variant_title) {
-      // Parse the variant title to extract current options
+      // Parse the variant title (e.g., "M / Red / Cotton")
       const parts = product.variant_title.split(' / ');
       
-      // For simplicity, we assume first part is size, second is color
-      // In a full implementation, you'd match these to the actual option names
+      // For simplicity, assume:
+      // - first part is size,
+      // - second part is color,
+      // - any additional parts are other options.
       const originalOpts = {
         size: parts[0] || '',
         color: parts[1] || '',
         other: {}
       };
       
-      // Handle additional option types if any
+      // Handle additional option types if any exist
       if (parts.length > 2 && Object.keys(otherOptions).length > 0) {
         const otherKeys = Object.keys(otherOptions);
         parts.slice(2).forEach((value, index) => {
@@ -105,32 +125,31 @@ export default function ExchangeOptions({
       
       setOriginalOptions(originalOpts);
       
-      // Initialize selections with original values
+      // Initialize selections with the original values
       setSelectedSize(originalOpts.size);
       setSelectedColor(originalOpts.color);
       setSelectedOtherOptions(originalOpts.other);
     }
-  }, [product]);
+  }, [product, otherOptions]);
 
   // Find the matching variant when selections change
   useEffect(() => {
     if (!variants.length || !selectedSize) return;
     
-    // Find variants more flexibly
+    // Filter variants based on selected size (and optionally color)
     const matchingVariants = variants.filter(variant => 
       variant.option1 === selectedSize && 
       (selectedColor ? variant.option2 === selectedColor : true)
     );
     
-    // Find the first available variant
-    const availableVariant = matchingVariants.find(v => v.isAvailable) || 
-                              matchingVariants[0];
+    // Pick the first available variant or fallback to the first match
+    const availableVariant = matchingVariants.find(v => v.isAvailable) || matchingVariants[0];
     
     // Only update if the variant is different
     if (availableVariant !== selectedVariant) {
       setSelectedVariant(availableVariant);
       
-      // Update exchange details for the parent component
+      // Notify the parent component of the exchange details change
       if (onExchangeDetailsChange) {
         onExchangeDetailsChange({
           variantId: availableVariant?.id || product.variant_id,
@@ -153,7 +172,7 @@ export default function ExchangeOptions({
     selectedVariant
   ]);
 
-  // Loading state
+  // Render loading state
   if (loading) {
     return (
       <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -165,7 +184,7 @@ export default function ExchangeOptions({
     );
   }
 
-  // Error state
+  // Render error state
   if (error) {
     return (
       <div className="p-4 bg-red-50 rounded-lg border border-red-200">
@@ -183,7 +202,7 @@ export default function ExchangeOptions({
     );
   }
 
-  // No available options
+  // Render a message if no exchange options are available
   if ((!sizeOptions.length && !colorOptions.length) || !variants.length) {
     return (
       <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -210,7 +229,7 @@ export default function ExchangeOptions({
         Select Exchange Options
       </h3>
       
-      {/* Size selection - only if there are size options */}
+      {/* Size selection */}
       {sizeOptions.length > 0 && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -242,7 +261,7 @@ export default function ExchangeOptions({
         </div>
       )}
       
-      {/* Color selection - only if there are color options */}
+      {/* Color selection */}
       {colorOptions.length > 0 && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -274,7 +293,7 @@ export default function ExchangeOptions({
         </div>
       )}
       
-      {/* Other options - if any */}
+      {/* Other options */}
       {Object.keys(otherOptions).length > 0 && (
         <>
           {Object.entries(otherOptions).map(([key, option]) => (
@@ -329,8 +348,8 @@ export default function ExchangeOptions({
               </p>
             ) : (
               <p className="text-sm font-medium text-red-800 flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 Out of Stock
               </p>
@@ -344,7 +363,7 @@ export default function ExchangeOptions({
         )}
       </div>
       
-      {/* Summary */}
+      {/* Exchange Summary */}
       <div className="mt-4 bg-white p-3 rounded border border-gray-200">
         <p className="text-sm font-medium text-gray-900">Exchange Summary</p>
         {selectedSize !== originalOptions.size && (

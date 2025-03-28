@@ -18,7 +18,7 @@ export default function AdminLogin() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/index');
+      router.replace('/admin');
     }
   }, [isAuthenticated, router]);
 
@@ -31,7 +31,7 @@ export default function AdminLogin() {
       const success = await login(email, password);
       
       if (success) {
-        router.push('/index');
+        router.push('/admin');
       } else {
         setError('Invalid email or password');
       }

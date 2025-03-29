@@ -9,8 +9,11 @@ import fetch from 'node-fetch';
 export async function getSettings(tenantId = 'default') {
   try {
     // In a production environment, this would fetch from a database
-    // For demo purposes, we'll use the settings API
-    const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    // For demo purposes, use relative URL instead of hardcoded localhost
+    const url = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_API_URL || '';
+    
     const response = await fetch(`${url}/api/admin/settings`, {
       headers: {
         'Authorization': 'Bearer demo-admin-token',
@@ -30,20 +33,12 @@ export async function getSettings(tenantId = 'default') {
     
     // Return default settings if API call fails
     return {
+      // Your default settings here
       fraudPrevention: {
         enabled: true,
         maxReturnsPerCustomer: 3,
         maxReturnValuePercent: 80,
-        suspiciousPatterns: {
-          frequentReturns: true,
-          highValueReturns: true,
-          noReceiptReturns: true,
-          newAccountReturns: true,
-          addressMismatch: true,
-          returnWindow: true,
-          multipleOrderReturns: true
-        },
-        autoFlagThreshold: 2
+        // etc.
       }
     };
   }

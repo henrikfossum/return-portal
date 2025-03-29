@@ -345,19 +345,19 @@ async function findFulfillmentLineItem(orderGlobalId, lineItemGlobalId) {
  */
 async function createReturnRequest(orderGlobalId, fulfillmentLineItemId, quantity) {
   const returnRequestMutation = `
-    mutation returnRequest($input: ReturnRequestInput!) {
-      returnRequest(input: $input) {
-        return {
-          id
-          status
-        }
-        userErrors {
-          field
-          message
-        }
+  mutation returnRequest($input: ReturnRequestInput!) {
+    returnRequest(input: $input) {
+      return {
+        id
+        status
+      }
+      userErrors {
+        field
+        message
       }
     }
-  `;
+  }
+`;
 
   try {
     const response = await graphqlClient.query({
@@ -370,7 +370,7 @@ async function createReturnRequest(orderGlobalId, fulfillmentLineItemId, quantit
               {
                 fulfillmentLineItemId,
                 quantity: parseInt(quantity, 10),
-                returnReason: "CUSTOMER_INITIATED",
+                returnReason: "OTHER", // Change from "CUSTOMER_INITIATED" to a valid value
                 customerNote: "Return requested through return portal",
               },
             ],

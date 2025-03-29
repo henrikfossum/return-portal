@@ -370,7 +370,7 @@ async function createReturnRequest(orderGlobalId, fulfillmentLineItemId, quantit
               {
                 fulfillmentLineItemId,
                 quantity: parseInt(quantity, 10),
-                returnReason: "OTHER", // Change from "CUSTOMER_INITIATED" to a valid value
+                returnReason: "OTHER", // Changed from "CUSTOMER_INITIATED"
                 customerNote: "Return requested through return portal",
               },
             ],

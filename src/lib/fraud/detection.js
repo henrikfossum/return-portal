@@ -9,12 +9,12 @@ import fetch from 'node-fetch';
 export async function getSettings(tenantId = 'default') {
   try {
     // In a production environment, this would fetch from a database
-    // For demo purposes, use relative URL instead of hardcoded localhost
-    const url = typeof window !== 'undefined' 
+    // For Node.js environment (server-side), we need a full URL
+    const baseUrl = typeof window !== 'undefined' 
       ? window.location.origin 
-      : process.env.NEXT_PUBLIC_API_URL || '';
+      : process.env.NEXT_PUBLIC_API_URL || 'https://return-portal-01295f30266a.herokuapp.com';
     
-    const response = await fetch(`${url}/api/admin/settings`, {
+    const response = await fetch(`${baseUrl}/api/admin/settings`, {
       headers: {
         'Authorization': 'Bearer demo-admin-token',
         'x-tenant-id': tenantId,
@@ -31,14 +31,25 @@ export async function getSettings(tenantId = 'default') {
   } catch (error) {
     console.error('Error fetching fraud settings:', error);
     
-    // Return default settings if API call fails
+    // Return more complete default settings to prevent undefined errors
     return {
-      // Your default settings here
+      returnWindowDays: 30,
+      allowExchanges: true,
+      requirePhotos: false,
+      autoApproveReturns: true,
+      notifyOnReturn: true,
       fraudPrevention: {
         enabled: true,
         maxReturnsPerCustomer: 3,
         maxReturnValuePercent: 80,
-        // etc.
+        suspiciousPatterns: {
+          frequentReturns: true,
+          highValueReturns: true,
+          noReceiptReturns: true,
+          newAccountReturns: true,
+          addressMismatch: true
+        },
+        autoFlagThreshold: 2
       }
     };
   }
@@ -181,12 +192,26 @@ export function analyzeLineItems(items) {
  * @returns {Promise<Object>} - Risk assessment
  */
 export async function analyzeReturnFraud(order, settings, shopifyClient) {
-  if (!order || !settings.fraudPrevention.enabled) {
+  if (!order) return { riskFactors: [], riskScore: 0, isHighRisk: false };
+  
+  // Ensure settings and suspiciousPatterns exist to avoid undefined errors
+  const fraudSettings = settings?.fraudPrevention || {};
+  const enabled = fraudSettings.enabled !== false;
+  
+  if (!enabled) {
     return { riskFactors: [], riskScore: 0, isHighRisk: false };
   }
   
+  const suspiciousPatterns = fraudSettings.suspiciousPatterns || {
+    frequentReturns: true,
+    highValueReturns: true,
+    noReceiptReturns: true,
+    newAccountReturns: true,
+    addressMismatch: true
+  };
+  
   const riskFactors = [];
-  const riskDetails = {}; // Detailed explanation for each risk factor
+  const riskDetails = {};
   
   // Get customer information
   const customerId = order.customer?.id;
@@ -196,21 +221,21 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   const { returns, metrics } = await getCustomerReturnHistory(email, customerId, shopifyClient);
   
   // Check for frequent returns
-  if (settings.fraudPrevention.suspiciousPatterns.frequentReturns && 
-      returns.length >= settings.fraudPrevention.maxReturnsPerCustomer) {
+  if (suspiciousPatterns.frequentReturns && 
+      returns.length >= (fraudSettings.maxReturnsPerCustomer || 3)) {
     riskFactors.push('Frequent Returns');
     riskDetails['Frequent Returns'] = `Customer has ${returns.length} previous returns`;
   }
   
   // Check for high return rate
-  if (settings.fraudPrevention.suspiciousPatterns.highReturnRate && 
+  if (suspiciousPatterns.highReturnRate && 
       metrics.returnRate > 50) { // Over 50% return rate
     riskFactors.push('High Return Rate');
     riskDetails['High Return Rate'] = `${metrics.returnRate.toFixed(0)}% of orders are returned`;
   }
   
   // Check for return after extended period
-  if (settings.fraudPrevention.suspiciousPatterns.returnWindow) {
+  if (suspiciousPatterns.returnWindow) {
     const orderDate = new Date(order.created_at);
     const returnDate = new Date(); // Current date = return request date
     const daysSinceOrder = Math.round((returnDate - orderDate) / (1000 * 60 * 60 * 24));
@@ -241,8 +266,8 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   
   const returnPercent = orderTotal > 0 ? (returnValue / orderTotal) * 100 : 0;
   
-  if (settings.fraudPrevention.suspiciousPatterns.highValueReturns && 
-      returnPercent > settings.fraudPrevention.maxReturnValuePercent) {
+  if (suspiciousPatterns.highValueReturns && 
+      returnPercent > (fraudSettings.maxReturnValuePercent || 80)) {
     riskFactors.push('High Value Return');
     riskDetails['High Value Return'] = `Return is ${returnPercent.toFixed(0)}% of order value`;
   }
@@ -254,7 +279,7 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   }
   
   // Check for address mismatch
-  if (settings.fraudPrevention.suspiciousPatterns.addressMismatch && 
+  if (suspiciousPatterns.addressMismatch && 
       order.shipping_address && order.billing_address) {
     const shipping = order.shipping_address;
     const billing = order.billing_address;
@@ -287,7 +312,7 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   }
   
   // Check for new account returns
-  if (settings.fraudPrevention.suspiciousPatterns.newAccountReturns && 
+  if (suspiciousPatterns.newAccountReturns && 
       order.customer && order.customer.created_at) {
     const accountAge = new Date(order.created_at) - new Date(order.customer.created_at);
     const accountAgeDays = accountAge / (1000 * 60 * 60 * 24);
@@ -299,7 +324,7 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   }
   
   // Check for returns from multiple devices/locations
-  if (settings.fraudPrevention.suspiciousPatterns.multipleDevices &&
+  if (suspiciousPatterns.multipleDevices &&
       returns.length > 0) {
     // This would require storing device/IP information in a real implementation
     // For now, we'll use a placeholder
@@ -329,7 +354,8 @@ export async function analyzeReturnFraud(order, settings, shopifyClient) {
   const riskScore = riskFactors.length;
   
   // Determine if this is high risk
-  const isHighRisk = riskScore >= settings.fraudPrevention.autoFlagThreshold;
+  const autoFlagThreshold = fraudSettings.autoFlagThreshold || 2;
+  const isHighRisk = riskScore >= autoFlagThreshold;
   
   return {
     riskFactors,

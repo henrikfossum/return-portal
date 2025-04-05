@@ -17,6 +17,7 @@
     "chart.js": "^4.4.8",
     "dotenv": "^16.4.7",
     "framer-motion": "^12.4.7",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.477.0",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.0",

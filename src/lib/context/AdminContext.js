@@ -54,22 +54,38 @@ export function AdminProvider({ children }) {
     const checkAuth = async () => {
       dispatch({ type: actions.SET_LOADING, payload: true });
       
-      // For MVP: Check if admin is logged in (use localStorage)
+      // Check if admin is logged in (use localStorage)
       const adminToken = localStorage.getItem('adminToken');
       const adminUser = localStorage.getItem('adminUser');
       
       if (adminToken) {
-        // Simple validation, in a real app you'd verify the token with your API
         try {
-          dispatch({ 
-            type: actions.SET_AUTHENTICATED, 
-            payload: { 
-              token: adminToken,
-              user: adminUser ? JSON.parse(adminUser) : { name: 'Admin User' }
-            } 
+          // Verify token with the API
+          const response = await fetch('/api/admin/verify-token', {
+            headers: {
+              'Authorization': `Bearer ${adminToken}`
+            }
           });
+          
+          if (response.ok) {
+            // Token is valid
+            const userData = await response.json();
+            
+            dispatch({ 
+              type: actions.SET_AUTHENTICATED, 
+              payload: { 
+                token: adminToken,
+                user: userData.user || JSON.parse(adminUser) || { name: 'Admin User' }
+              } 
+            });
+          } else {
+            // Token is invalid
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            dispatch({ type: actions.LOGOUT });
+          }
         } catch (error) {
-          console.error('Error parsing admin user:', error);
+          console.error('Error verifying token:', error);
           localStorage.removeItem('adminToken');
           localStorage.removeItem('adminUser');
           dispatch({ type: actions.LOGOUT });
@@ -89,25 +105,36 @@ export function AdminProvider({ children }) {
     dispatch({ type: actions.SET_LOADING, payload: true });
     
     try {
-      // For MVP: Hardcoded credentials
-      if (email === 'admin@example.com' && password === 'password123') {
-        // Set a simple token in localStorage
-        const token = 'demo-admin-token';
-        const user = { name: 'Admin User', email };
+      // Call the API to authenticate
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
         
-        localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminUser', JSON.stringify(user));
+        // Save token and user data
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminUser', JSON.stringify(data.user));
         
         dispatch({ 
           type: actions.SET_AUTHENTICATED, 
-          payload: { token, user } 
+          payload: { 
+            token: data.token, 
+            user: data.user 
+          } 
         });
         
         return true;
       } else {
+        const errorData = await response.json();
         dispatch({ 
           type: actions.SET_ERROR, 
-          payload: 'Invalid credentials' 
+          payload: errorData.message || 'Invalid credentials' 
         });
         return false;
       }
@@ -118,6 +145,8 @@ export function AdminProvider({ children }) {
         payload: 'Login failed. Please try again.' 
       });
       return false;
+    } finally {
+      dispatch({ type: actions.SET_LOADING, payload: false });
     }
   };
 

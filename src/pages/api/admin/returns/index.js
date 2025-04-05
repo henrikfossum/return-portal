@@ -19,11 +19,10 @@ export default async function handler(req, res) {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(
+    jwt.verify(
       token,
       process.env.JWT_SECRET || 'default-jwt-secret-replace-in-production'
     );
-    // Optionally, check user role or other properties here if needed.
   } catch (error) {
     console.error('Token verification error:', error);
     return res.status(401).json({ message: 'Invalid or expired token' });

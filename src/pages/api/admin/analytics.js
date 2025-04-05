@@ -1,4 +1,5 @@
 // src/pages/api/admin/analytics.js
+import jwt from 'jsonwebtoken';
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
 // Get settings for fraud prevention
@@ -161,12 +162,21 @@ function analyzeReturnsForFraud(orders, returns, settings) {
 
 export default async function handler(req, res) {
   // Check for admin authorization
-  const adminToken = req.headers.authorization?.split(' ')[1];
-  if (!adminToken || adminToken !== 'demo-admin-token') {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Admin authentication required'
-    });
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Authorization token required' });
+  }
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'default-jwt-secret-replace-in-production'
+    );
+    // Optionally, check user role or other properties here if needed.
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 
   const tenantId = req.headers['x-tenant-id'] || 'default';

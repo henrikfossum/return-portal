@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
 export default async function handler(req, res) {
   // Check for admin authorization using JWT

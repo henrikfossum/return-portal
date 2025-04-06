@@ -1,15 +1,6 @@
 // src/pages/api/admin/returns/index.js
 import jwt from 'jsonwebtoken';
-import { getShopifyClientForTenant } from '@/lib/shopify/client';
 import { getAllReturns } from '@/lib/services/returnService';
-
-// In-memory cache for API responses
-let apiCache = {
-  key: null,
-  data: null,
-  timestamp: null,
-  expiresIn: 15 * 1000 // 15 second cache
-};
 
 export default async function handler(req, res) {
   // Check for admin authorization using JWT

@@ -1,4 +1,3 @@
-// src/pages/api/admin/returns/[id].js
 import jwt from 'jsonwebtoken';
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 
@@ -19,7 +18,6 @@ export default async function handler(req, res) {
     console.error('Token verification error:', error);
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
-
 
   const { id } = req.query;
   if (!id) {
@@ -44,13 +42,13 @@ export default async function handler(req, res) {
       
       return res.status(200).json(returnData);
     } catch (err) {
-      // Error handling...
+      console.error(`GET /returns/${id} error:`, err);
+      return res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'An unexpected error occurred while fetching the return'
+      });
     }
-  }
-  
-  
-  // PATCH method - update return status
-  else if (req.method === 'PATCH') {
+  } else if (req.method === 'PATCH') {
     try {
       const { status, adminNotes } = req.body;
       
@@ -72,14 +70,18 @@ export default async function handler(req, res) {
         return: updatedReturn
       });
     } catch (err) {
-      // Error handling...
+      console.error(`PATCH /returns/${id} error:`, err);
+      return res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'An unexpected error occurred while updating the return'
+      });
     }
   }
   
-  // Handle other methods
+  // Handle unsupported methods
   res.setHeader('Allow', ['GET', 'PATCH']);
   return res.status(405).json({ 
     error: 'Method Not Allowed',
-    message: `Method ${req.method} is not allowed` 
+    message: `Method ${req.method} is not allowed`
   });
 }

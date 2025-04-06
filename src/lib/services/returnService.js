@@ -35,8 +35,9 @@ export async function getReturnsByOrderId(orderId, tenantId = 'default') {
   await connectToDatabase();
   
   try {
+    // Look up by orderNumber instead of shopifyOrderId
     return ReturnRequest.find({ 
-      orderId, 
+      orderNumber: orderId, 
       tenantId 
     }).sort({ createdAt: -1 });
   } catch (error) {

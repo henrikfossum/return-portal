@@ -44,7 +44,7 @@ export default function ProductCard({
     >
       {/* Show quantity badge if product has multiple items */}
       {maxQuantity > 1 && (
-        <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium z-10">
+        <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium z-10 shadow-sm">
           {maxQuantity}
         </div>
       )}

@@ -72,12 +72,21 @@ export default async function handler(req, res) {
     // Fetch the full order to analyze
     let order;
     try {
+      // Search for the order by order number (name) instead of ID
       const { body } = await client.get({
-        path: `orders/${orderId}`
+        path: 'orders',
+        query: {
+          status: 'any',
+          name: orderId  // This is how you search by order number in Shopify
+        }
       });
       
-      if (body?.order) {
-        order = body.order;
+      // Check if we found any orders
+      if (body?.orders && body.orders.length > 0) {
+        // Use the first matching order
+        order = body.orders[0];
+      } else {
+        console.error(`No order found with number ${orderId}`);
       }
     } catch (error) {
       console.error(`Error fetching order ${orderId}:`, error);

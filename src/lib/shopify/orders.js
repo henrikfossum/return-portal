@@ -88,20 +88,24 @@ export async function lookupOrder(orderId, email, tenantId = 'default', clientId
 
     // Fetch the order by ID
     try {
-      const { body } = await client.get({
-        path: `orders/${orderId}`,
+      const { body: orderListResponse } = await client.get({
+        path: 'orders',
+        query: {
+          status: 'any',
+          name: orderId // Using the friendly order number
+        }
       });
-
-      // Check if order exists
-      if (!body?.order) {
-        logger.warn(`Order ${orderId} not found`, { tenantId }, 'ORDER');
+      
+      // Then verify if we found the order
+      if (!orderListResponse?.orders || orderListResponse.orders.length === 0) {
         throw createApiError(
           ErrorTypes.NOT_FOUND,
           'Order not found'
         );
       }
       
-      const order = body.order;
+      // Use the first matching order
+      const order = orderListResponse.orders[0];
       
       // Verify email match (case-insensitive)
       if (order.email.toLowerCase() !== email.toLowerCase()) {

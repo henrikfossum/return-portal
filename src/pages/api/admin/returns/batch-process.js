@@ -2,6 +2,7 @@
 import { processReturn, processExchange } from '@/lib/shopify/returns';
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 import { analyzeReturnFraud, getSettings, flagFraudulentReturn } from '@/lib/fraud/detection';
+import { createReturnRequest } from '@/lib/services/returnService';
 
 // Helper function to validate items
 function validateItems(items) {
@@ -140,6 +141,43 @@ export default async function handler(req, res) {
             exchangeDetails.variantId,
             item.quantity || 1
           );
+
+          try{
+              // Build the return data object
+              const returnData = {
+                orderId: orderId,
+                orderNumber: order.order_number,
+                shopifyOrderId: order.id,
+                customer: {
+                  name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+                  email: order.email,
+                  phone: order.customer?.phone
+                },
+                status: 'pending', // Initial status
+                items: items.map(item => {
+                  // Find the original item in the order
+                  const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
+                  return {
+                    id: item.id,
+                    title: orderItem?.title || 'Unknown Item',
+                    variant_title: orderItem?.variant_title || '',
+                    price: parseFloat(orderItem?.price || 0),
+                    quantity: item.quantity || 1,
+                    returnOption: item.returnOption,
+                    returnReason: item.returnReason || { reason: 'Not specified' },
+                    exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
+                  };
+                }),
+                createdAt: new Date(),
+                tenantId: tenantId
+              };
+              
+              // Save to database
+              await createReturnRequest(returnData);
+            } catch (dbError) {
+              console.error('Error saving return to database:', dbError);
+              // Don't throw error here - we want to continue even if DB save fails
+          }
           
           results.push({
             lineItemId,
@@ -160,6 +198,43 @@ export default async function handler(req, res) {
             lineItemId,
             item.quantity || 1
           );
+
+          try {
+            // Build the return data object
+            const returnData = {
+              orderId: orderId,
+              orderNumber: order.order_number,
+              shopifyOrderId: order.id,
+              customer: {
+                name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+                email: order.email,
+                phone: order.customer?.phone
+              },
+              status: 'pending', // Initial status
+              items: items.map(item => {
+                // Find the original item in the order
+                const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
+                return {
+                  id: item.id,
+                  title: orderItem?.title || 'Unknown Item',
+                  variant_title: orderItem?.variant_title || '',
+                  price: parseFloat(orderItem?.price || 0),
+                  quantity: item.quantity || 1,
+                  returnOption: item.returnOption,
+                  returnReason: item.returnReason || { reason: 'Not specified' },
+                  exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
+                };
+              }),
+              createdAt: new Date(),
+              tenantId: tenantId
+            };
+            
+            // Save to database
+            await createReturnRequest(returnData);
+          } catch (dbError) {
+            console.error('Error saving return to database:', dbError);
+            // Don't throw error here - we want to continue even if DB save fails
+          }
           
           results.push({
             lineItemId,

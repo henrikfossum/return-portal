@@ -72,6 +72,7 @@ export async function getReturnById(id, tenantId = 'default') {
  * @param {Number} limit - Number of items per page
  * @returns {Promise<Object>} - Paginated result with total count
  */
+// Add or update these functions in the file
 export async function getAllReturns(filters = {}, page = 1, limit = 10) {
   await connectToDatabase();
   
@@ -79,7 +80,7 @@ export async function getAllReturns(filters = {}, page = 1, limit = 10) {
     const query = { tenantId: filters.tenantId || 'default' };
     
     // Apply filters
-    if (filters.status && filters.status !== 'all') {
+    if (filters.status) {
       query.status = filters.status;
     }
     
@@ -118,12 +119,23 @@ export async function getAllReturns(filters = {}, page = 1, limit = 10) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
-      
+    
+    // Calculate statistics
+    const stats = {
+      totalReturns: await ReturnRequest.countDocuments({ tenantId: filters.tenantId || 'default' }),
+      pendingReturns: await ReturnRequest.countDocuments({ ...query, status: 'pending' }),
+      approvedReturns: await ReturnRequest.countDocuments({ ...query, status: 'approved' }),
+      completedReturns: await ReturnRequest.countDocuments({ ...query, status: 'completed' }),
+      flaggedReturns: await ReturnRequest.countDocuments({ ...query, status: 'flagged' }),
+      rejectedReturns: await ReturnRequest.countDocuments({ ...query, status: 'rejected' })
+    };
+    
     return {
       returns,
       total,
       page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
+      stats
     };
   } catch (error) {
     console.error('Error fetching all returns:', error);

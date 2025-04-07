@@ -85,29 +85,26 @@ export default async function handler(req, res) {
     let order; // Declare before using it
 
     try {
-      const { body } = await client.get({
+      orderResponse = await client.get({
         path: 'orders',
-        query: {
-          status: 'any',
-          name: orderId  // This is the correct way to search by order number
-        }
+        query: { status: 'any', name: orderId }
       });
+      const { body } = orderResponse;
       
-      // Then checking if orders exist
       if (body?.orders && body.orders.length > 0) {
         order = body.orders[0];
+      } else if (body?.order) {
+        order = body.order;
       }
-      } catch (shopifyError) {
+    } catch (shopifyError) {
       console.error('Shopify API error:', shopifyError);
-      
-      // Handle different Shopify API errors
+      // Handle the error appropriately
       if (shopifyError.response?.code === 404) {
         return res.status(404).json({
           error: 'Order Not Found',
           message: 'We could not find an order with the provided ID',
         });
       }
-      
       return res.status(500).json({
         error: 'Service Unavailable',
         message: 'We are currently unable to process your request. Please try again later.',

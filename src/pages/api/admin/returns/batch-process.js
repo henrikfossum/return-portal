@@ -36,7 +36,14 @@ function validateItems(items) {
 }
 
 export default async function handler(req, res) {
+  console.log('🔄 Starting Batch Return Processing', {
+    method: req.method,
+    itemCount: req.body.items?.length,
+    tenantId: req.headers['x-tenant-id'] || 'default'
+  });
+
   if (req.method !== 'POST') {
+    console.warn('❌ Invalid request method received');
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ 
       error: 'Method Not Allowed',
@@ -50,6 +57,10 @@ export default async function handler(req, res) {
   // Validate items
   const validation = validateItems(items);
   if (!validation.valid) {
+    console.error('❌ Invalid items in batch process:', {
+      message: validation.message,
+      invalidItems: validation.invalidItems
+    });
     return res.status(400).json({
       error: 'Invalid Request',
       message: validation.message,
@@ -58,8 +69,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('🕵️ Starting fraud prevention and order retrieval');
+    
     // Get tenant settings for fraud prevention
     const settings = await getSettings(tenantId);
+    console.log('📋 Tenant settings retrieved', {
+      fraudPreventionEnabled: settings.fraudPrevention?.enabled
+    });
     
     // Get Shopify client for this tenant
     const shopifyClients = await getShopifyClientForTenant(tenantId);
@@ -69,6 +85,8 @@ export default async function handler(req, res) {
     const firstItem = items[0];
     const orderId = firstItem.orderId;
     
+    console.log('🔍 Attempting to fetch order details', { orderId });
+    
     // Fetch the full order to analyze
     let order;
     try {
@@ -77,7 +95,7 @@ export default async function handler(req, res) {
         path: 'orders',
         query: {
           status: 'any',
-          name: orderId  // This is how you search by order number in Shopify
+          name: orderId
         }
       });
       
@@ -85,17 +103,26 @@ export default async function handler(req, res) {
       if (body?.orders && body.orders.length > 0) {
         // Use the first matching order
         order = body.orders[0];
+        console.log('✅ Order found successfully', { 
+          orderNumber: order.order_number,
+          customerEmail: order.email 
+        });
       } else {
-        console.error(`No order found with number ${orderId}`);
+        console.error(`❌ No order found with number ${orderId}`);
       }
     } catch (error) {
-      console.error(`Error fetching order ${orderId}:`, error);
+      console.error(`❌ Error fetching order ${orderId}:`, {
+        message: error.message,
+        stack: error.stack
+      });
     }
     
     // If we have the order and fraud prevention is enabled, check for fraud
     let fraudDetection = { isHighRisk: false, riskFactors: [] };
     
     if (order && settings.fraudPrevention.enabled) {
+      console.log('🚨 Analyzing return for potential fraud');
+      
       // Add the return items to the order for analysis
       order.return_items = items.map(item => ({
         id: item.id,
@@ -106,14 +133,21 @@ export default async function handler(req, res) {
       // Analyze for fraud
       fraudDetection = await analyzeReturnFraud(order, settings, client);
       
+      console.log('🕵️ Fraud Detection Results', {
+        isHighRisk: fraudDetection.isHighRisk,
+        riskFactors: fraudDetection.riskFactors,
+        riskScore: fraudDetection.riskScore
+      });
+      
       // If high risk, flag the order
       if (fraudDetection.isHighRisk) {
+        console.warn(`🚩 High-risk return detected for order ${orderId}`);
+        
         await flagFraudulentReturn(order, fraudDetection.riskFactors, client);
         
         // If auto-approve is disabled for high-risk returns, notify the admin
         if (!settings.autoApproveReturns) {
-          // In a real app, this would send an email or notification
-          console.log(`High-risk return detected for order ${orderId}. Manual review needed.`);
+          console.log(`🚨 Manual review needed for high-risk return: ${orderId}`);
         }
       }
     }
@@ -122,21 +156,25 @@ export default async function handler(req, res) {
     const results = [];
     const processedIds = new Set(); // Track processed items to prevent duplicates
     
+    console.log('🔄 Starting item processing', { totalItems: items.length });
+    
     for (const item of items) {
       const { id: lineItemId, orderId, returnOption, exchangeDetails } = item;
       
       // Skip if we've already processed this item
       if (processedIds.has(lineItemId)) {
-        console.log(`Skipping duplicate item: ${lineItemId}`);
+        console.log(`⏩ Skipping duplicate item: ${lineItemId}`);
         continue;
       }
       
       processedIds.add(lineItemId);
       
       try {
+        let processResult;
+        let returnData;
+
         if (returnOption === 'exchange' && exchangeDetails) {
-          // Log for debugging
-          console.log('Processing exchange:', {
+          console.log('🔄 Processing exchange', {
             lineItemId,
             orderId,
             variantId: exchangeDetails.variantId,
@@ -144,116 +182,121 @@ export default async function handler(req, res) {
           });
           
           // Process exchange 
-          const exchangeResult = await processExchange(
+          processResult = await processExchange(
             orderId,
             lineItemId,
             exchangeDetails.variantId,
             item.quantity || 1
           );
 
-          try{
-              // Build the return data object
-              const returnData = {
-                orderId: orderId,
-                orderNumber: order.order_number,
-                shopifyOrderId: order.id,
-                customer: {
-                  name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
-                  email: order.email,
-                  phone: order.customer?.phone
-                },
-                status: 'pending', // Initial status
-                items: items.map(item => {
-                  // Find the original item in the order
-                  const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
-                  return {
-                    id: item.id,
-                    title: orderItem?.title || 'Unknown Item',
-                    variant_title: orderItem?.variant_title || '',
-                    price: parseFloat(orderItem?.price || 0),
-                    quantity: item.quantity || 1,
-                    returnOption: item.returnOption,
-                    returnReason: item.returnReason || { reason: 'Not specified' },
-                    exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
-                  };
-                }),
-                createdAt: new Date(),
-                tenantId: tenantId
+          // Build the return data object
+          returnData = {
+            orderId: orderId,
+            orderNumber: order.order_number,
+            shopifyOrderId: order.id,
+            customer: {
+              name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+              email: order.email,
+              phone: order.customer?.phone
+            },
+            status: 'pending', // Initial status
+            items: items.map(item => {
+              // Find the original item in the order
+              const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
+              return {
+                id: item.id,
+                title: orderItem?.title || 'Unknown Item',
+                variant_title: orderItem?.variant_title || '',
+                price: parseFloat(orderItem?.price || 0),
+                quantity: item.quantity || 1,
+                returnOption: item.returnOption,
+                returnReason: item.returnReason || { reason: 'Not specified' },
+                exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
               };
-              
-              // Save to database
-              await createReturnRequest(returnData);
-            } catch (dbError) {
-              console.error('Error saving return to database:', dbError);
-              // Don't throw error here - we want to continue even if DB save fails
-          }
-          
-          results.push({
-            lineItemId,
-            type: 'exchange',
-            success: true,
-            data: exchangeResult
-          });
+            }),
+            createdAt: new Date(),
+            tenantId: tenantId
+          };
         } else {
-          // Process return
-          console.log('Processing return:', {
+          console.log('🔙 Processing return', {
             lineItemId,
             orderId,
             quantity: item.quantity || 1
           });
           
-          const returnResult = await processReturn(
+          // Process return
+          processResult = await processReturn(
             orderId,
             lineItemId,
             item.quantity || 1
           );
 
-          try {
-            // Build the return data object
-            const returnData = {
-              orderId: orderId,
-              orderNumber: order.order_number,
-              shopifyOrderId: order.id,
-              customer: {
-                name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
-                email: order.email,
-                phone: order.customer?.phone
-              },
-              status: 'pending', // Initial status
-              items: items.map(item => {
-                // Find the original item in the order
-                const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
-                return {
-                  id: item.id,
-                  title: orderItem?.title || 'Unknown Item',
-                  variant_title: orderItem?.variant_title || '',
-                  price: parseFloat(orderItem?.price || 0),
-                  quantity: item.quantity || 1,
-                  returnOption: item.returnOption,
-                  returnReason: item.returnReason || { reason: 'Not specified' },
-                  exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
-                };
-              }),
-              createdAt: new Date(),
-              tenantId: tenantId
-            };
-            
-            // Save to database
-            await createReturnRequest(returnData);
-          } catch (dbError) {
-            console.error('Error saving return to database:', dbError);
-            // Don't throw error here - we want to continue even if DB save fails
-          }
-          
-          results.push({
-            lineItemId,
-            type: 'return',
-            success: true,
-            data: returnResult
-          });
+          // Build the return data object
+          returnData = {
+            orderId: orderId,
+            orderNumber: order.order_number,
+            shopifyOrderId: order.id,
+            customer: {
+              name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+              email: order.email,
+              phone: order.customer?.phone
+            },
+            status: 'pending', // Initial status
+            items: items.map(item => {
+              // Find the original item in the order
+              const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
+              return {
+                id: item.id,
+                title: orderItem?.title || 'Unknown Item',
+                variant_title: orderItem?.variant_title || '',
+                price: parseFloat(orderItem?.price || 0),
+                quantity: item.quantity || 1,
+                returnOption: item.returnOption,
+                returnReason: item.returnReason || { reason: 'Not specified' },
+                exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
+              };
+            }),
+            createdAt: new Date(),
+            tenantId: tenantId
+          };
         }
+
+        // Save to database with additional logging
+        try {
+          console.log('💾 Attempting to save return request to database', {
+            orderId: returnData.orderId,
+            orderNumber: returnData.orderNumber,
+            itemCount: returnData.items.length
+          });
+
+          const savedReturn = await createReturnRequest(returnData);
+          
+          console.log('✅ Return request saved successfully', {
+            savedReturnId: savedReturn._id,
+            savedOrderNumber: savedReturn.orderNumber
+          });
+        } catch (dbError) {
+          console.error('❌ Error saving return to database:', {
+            message: dbError.message,
+            name: dbError.name,
+            stack: dbError.stack
+          });
+          // Continue processing even if database save fails
+        }
+        
+        results.push({
+          lineItemId,
+          type: returnOption,
+          success: true,
+          data: processResult
+        });
       } catch (itemError) {
-        console.error(`Error processing item ${lineItemId}:`, itemError);
+        console.error(`❌ Error processing item ${lineItemId}:`, {
+          message: itemError.message,
+          name: itemError.name,
+          stack: itemError.stack
+        });
+        
         results.push({
           lineItemId,
           type: returnOption,
@@ -266,9 +309,17 @@ export default async function handler(req, res) {
     // Check if any operations failed
     const hasFailures = results.some(result => !result.success);
     
+    console.log('🏁 Batch processing complete', {
+      totalItems: items.length,
+      processedItems: results.length,
+      successfulItems: results.filter(r => r.success).length,
+      failedItems: results.filter(r => !r.success).length
+    });
+
     // Return response with fraud detection info
     if (hasFailures) {
-      // Return 207 Multi-Status for partial success
+      console.warn('⚠️ Partial processing failure detected');
+      
       return res.status(207).json({
         status: 'partialSuccess',
         message: 'Some items could not be processed.',
@@ -293,7 +344,12 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error processing batch:', error);
+    console.error('❌ Critical error in batch processing:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
     return res.status(500).json({
       error: 'Server Error',
       message: 'An error occurred while processing your request',

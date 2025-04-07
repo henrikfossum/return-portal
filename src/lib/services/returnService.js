@@ -11,8 +11,13 @@ export async function createReturnRequest(returnData) {
   await connectToDatabase();
   
   try {
-    // Log the entire return data before saving
-    console.log('Attempting to save return request:', JSON.stringify(returnData, null, 2));
+    console.log('🚀 Creating Return Request with Data:', JSON.stringify({
+      orderId: returnData.orderId,
+      orderNumber: returnData.orderNumber,
+      customerEmail: returnData.customer?.email,
+      itemCount: returnData.items?.length,
+      tenantId: returnData.tenantId
+    }, null, 2));
 
     const newReturn = new ReturnRequest({
       ...returnData,
@@ -20,19 +25,37 @@ export async function createReturnRequest(returnData) {
       updatedAt: new Date()
     });
     
-    // Log the Mongoose model before saving
-    console.log('Mongoose Return Request Model:', newReturn);
+    console.log('🔍 Mongoose Model Before Save:', JSON.stringify({
+      modelId: newReturn._id,
+      status: newReturn.status,
+      itemIds: newReturn.items?.map(item => item.id)
+    }, null, 2));
 
     const savedReturn = await newReturn.save();
     
-    console.log('Return request saved successfully:', savedReturn);
+    console.log('✅ Return Saved Successfully:', JSON.stringify({
+      savedId: savedReturn._id,
+      savedOrderNumber: savedReturn.orderNumber,
+      savedItemCount: savedReturn.items?.length
+    }, null, 2));
+
     return savedReturn;
   } catch (error) {
-    console.error('DETAILED Error creating return request:', error);
-    
-    // Log specific validation errors
+    console.error('❌ Error Creating Return Request:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      stack: error.stack
+    });
+
+    // If it's a validation error, log specific details
     if (error.name === 'ValidationError') {
-      console.error('Validation Errors:', Object.values(error.errors).map(e => e.message));
+      console.error('🚨 Validation Errors:', 
+        Object.keys(error.errors).map(key => ({
+          path: key,
+          message: error.errors[key].message
+        }))
+      );
     }
 
     throw error;

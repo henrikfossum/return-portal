@@ -11,16 +11,30 @@ export async function createReturnRequest(returnData) {
   await connectToDatabase();
   
   try {
+    // Log the entire return data before saving
+    console.log('Attempting to save return request:', JSON.stringify(returnData, null, 2));
+
     const newReturn = new ReturnRequest({
       ...returnData,
       createdAt: new Date(),
       updatedAt: new Date()
     });
     
-    await newReturn.save();
-    return newReturn;
+    // Log the Mongoose model before saving
+    console.log('Mongoose Return Request Model:', newReturn);
+
+    const savedReturn = await newReturn.save();
+    
+    console.log('Return request saved successfully:', savedReturn);
+    return savedReturn;
   } catch (error) {
-    console.error('Error creating return request:', error);
+    console.error('DETAILED Error creating return request:', error);
+    
+    // Log specific validation errors
+    if (error.name === 'ValidationError') {
+      console.error('Validation Errors:', Object.values(error.errors).map(e => e.message));
+    }
+
     throw error;
   }
 }

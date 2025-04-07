@@ -82,6 +82,8 @@ export default async function handler(req, res) {
 
     // Fetch the order by ID with error handling
     let orderResponse;
+    let order; // Declare before using it
+
     try {
       const { body } = await client.get({
         path: 'orders',
@@ -131,7 +133,7 @@ export default async function handler(req, res) {
     }
 
     // Validate order status before proceeding
-    const order = body.order;
+    order = body.order;
     
     // Check if order is paid
     if (order.financial_status !== 'paid' && 

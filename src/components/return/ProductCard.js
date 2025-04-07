@@ -42,13 +42,6 @@ export default function ProductCard({
       className={`relative ${isSelected ? 'border-blue-500' : ''} ${className}`}
       onClick={onSelect ? () => onSelect(product.id) : undefined}
     >
-      {/* Show quantity badge if product has multiple items */}
-      {maxQuantity > 1 && (
-        <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium z-10 shadow-sm">
-          {maxQuantity}
-        </div>
-      )}
-      
       <div className="flex items-start space-x-4">
         {/* Product image */}
         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
@@ -80,10 +73,19 @@ export default function ProductCard({
         </div>
         
         <div className="flex-1 min-w-0">
-          {/* Product title and variant */}
-          <h3 className="text-sm font-medium text-gray-900 truncate">
-            {product.title || product.name}
-          </h3>
+          {/* Product title and quantity badge - FIXED POSITIONING */}
+          <div className="flex items-center">
+            <h3 className="text-sm font-medium text-gray-900 truncate">
+              {product.title || product.name}
+            </h3>
+            {/* Show quantity badge if product has multiple items - MOVED HERE */}
+            {maxQuantity > 1 && (
+              <div className="ml-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0">
+                {maxQuantity}
+              </div>
+            )}
+          </div>
+          
           {product.variant_title && (
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
               {product.variant_title

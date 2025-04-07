@@ -53,6 +53,24 @@ function returnReducer(state, action) {
           returnOptions: { ...state.returnOptions, [itemId]: { option: option || 'return', details } },
         };
       }
+      case actions.SET_RETURN_REASON: {
+      const { itemId, reason } = action.payload;
+      const updatedItems = state.itemsToReturn.map(item => {
+        if (item.id.toString() === itemId.toString()) {
+          return {
+            ...item,
+            returnReason: reason
+          };
+        }
+        return item;
+      });
+      
+      return {
+        ...state,
+        itemsToReturn: updatedItems,
+        returnReasons: { ...state.returnReasons, [itemId]: reason },
+      };
+    }
     case actions.SET_LOADING:
       return { ...state, loading: action.payload };
     case actions.SET_ERROR:

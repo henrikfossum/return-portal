@@ -7,16 +7,64 @@ import fetch from 'node-fetch';
  * @returns {Promise<Object>} - Tenant settings
  */
 export async function getSettings(tenantId = 'default') {
+  // Define default settings
+  const defaultSettings = {
+    returnWindowDays: 30,
+    allowExchanges: true,
+    requirePhotos: false,
+    autoApproveReturns: true,
+    notifyOnReturn: true,
+    fraudPrevention: {
+      enabled: true,
+      maxReturnsPerCustomer: 3,
+      maxReturnValuePercent: 80,
+      suspiciousPatterns: {
+        frequentReturns: true,
+        highValueReturns: true,
+        noReceiptReturns: true,
+        newAccountReturns: true,
+        addressMismatch: true
+      },
+      autoFlagThreshold: 2
+    }
+  };
+
+  // Server-side approach (API calls during returns processing)
+  if (typeof window === 'undefined') {
+    try {
+      // For server-side processing, access settings directly from tenant configs
+      // This avoids making API calls that require authentication
+      const { tenantConfigs } = require('../tenant/config');
+      const config = tenantConfigs[tenantId] || tenantConfigs.default;
+      
+      return {
+        ...defaultSettings,
+        ...config.settings,
+        fraudPrevention: {
+          ...defaultSettings.fraudPrevention,
+          ...(config.settings?.fraudPrevention || {})
+        }
+      };
+    } catch (error) {
+      console.error('Error loading tenant config:', error);
+      return defaultSettings;
+    }
+  }
+  
+  // Client-side approach (when user is browsing the admin panel)
   try {
-    // In a production environment, this would fetch from a database
-    // For Node.js environment (server-side), we need a full URL
-    const baseUrl = typeof window !== 'undefined' 
-      ? window.location.origin 
-      : process.env.NEXT_PUBLIC_API_URL || 'https://return-portal-01295f30266a.herokuapp.com';
+    const baseUrl = window.location.origin;
+    
+    // For client-side, we can use the auth token from localStorage
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (!adminToken) {
+      return defaultSettings;
+    }
     
     const response = await fetch(`${baseUrl}/api/admin/settings`, {
       headers: {
-        'Authorization': 'Bearer demo-admin-token',
+        'Authorization': `Bearer ${adminToken}`,
         'x-tenant-id': tenantId,
         'Content-Type': 'application/json'
       }
@@ -30,28 +78,7 @@ export async function getSettings(tenantId = 'default') {
     return settings;
   } catch (error) {
     console.error('Error fetching fraud settings:', error);
-    
-    // Return more complete default settings to prevent undefined errors
-    return {
-      returnWindowDays: 30,
-      allowExchanges: true,
-      requirePhotos: false,
-      autoApproveReturns: true,
-      notifyOnReturn: true,
-      fraudPrevention: {
-        enabled: true,
-        maxReturnsPerCustomer: 3,
-        maxReturnValuePercent: 80,
-        suspiciousPatterns: {
-          frequentReturns: true,
-          highValueReturns: true,
-          noReceiptReturns: true,
-          newAccountReturns: true,
-          addressMismatch: true
-        },
-        autoFlagThreshold: 2
-      }
-    };
+    return defaultSettings;
   }
 }
 

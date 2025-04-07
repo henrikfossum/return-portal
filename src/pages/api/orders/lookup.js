@@ -75,52 +75,54 @@ export default async function handler(req, res) {
     
     const settings = await getTenantSettings(tenantId);
     const RETURN_WINDOW_DAYS = settings.returnWindowDays || 100;
-
+  
     // Calculate cutoff date for returns
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - RETURN_WINDOW_DAYS);
-
+  
     // Fetch the order by ID with error handling
-    let orderResponse;
     let order; // Declare before using it
-
+  
     try {
-      orderResponse = await client.get({
+      const response = await client.get({
         path: 'orders',
         query: { status: 'any', name: orderId }
       });
-      const { body } = orderResponse;
       
-      if (body?.orders && body.orders.length > 0) {
-        order = body.orders[0];
-      } else if (body?.order) {
-        order = body.order;
+      if (response.body?.orders && response.body.orders.length > 0) {
+        order = response.body.orders[0];
+      } else {
+        // No order found
+        return res.status(404).json({
+          error: 'Order Not Found',
+          message: 'We could not find an order with the provided ID',
+        });
       }
     } catch (shopifyError) {
       console.error('Shopify API error:', shopifyError);
-      // Handle the error appropriately
+      
+      // Handle different Shopify API errors
       if (shopifyError.response?.code === 404) {
         return res.status(404).json({
           error: 'Order Not Found',
           message: 'We could not find an order with the provided ID',
         });
       }
+      
       return res.status(500).json({
         error: 'Service Unavailable',
         message: 'We are currently unable to process your request. Please try again later.',
       });
     }
-    
-    const { body } = orderResponse;
-
+  
     // Verify order exists and email matches
-    if (!body?.order) {
+    if (!order) {
       return res.status(404).json({
         error: 'Order Not Found',
         message: 'We could not find an order with the provided ID',
       });
     }
-    
+        
     // Case-insensitive email comparison
     if (body.order.email.toLowerCase() !== email.toLowerCase()) {
       return res.status(403).json({

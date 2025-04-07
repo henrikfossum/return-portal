@@ -34,8 +34,26 @@ export async function getSettings(tenantId = 'default') {
     try {
       // For server-side processing, access settings directly from tenant configs
       // This avoids making API calls that require authentication
-      const { tenantConfigs } = require('../tenant/config');
-      const config = tenantConfigs[tenantId] || tenantConfigs.default;
+      if (typeof window === 'undefined') {
+        try {
+          // Use dynamic import instead of require()
+          const { tenantConfigs } = await import('../tenant/config');
+          const config = tenantConfigs[tenantId] || tenantConfigs.default;
+          
+          return {
+            ...defaultSettings,
+            ...config.settings,
+            fraudPrevention: {
+              ...defaultSettings.fraudPrevention,
+              ...(config.settings?.fraudPrevention || {})
+            }
+          };
+        } catch (error) {
+          console.error('Error loading tenant config:', error);
+          return defaultSettings;
+        }
+      }
+     const config = tenantConfigs[tenantId] || tenantConfigs.default;
       
       return {
         ...defaultSettings,

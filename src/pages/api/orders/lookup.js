@@ -123,16 +123,13 @@ export default async function handler(req, res) {
       });
     }
         
-    // Case-insensitive email comparison
-    if (body.order.email.toLowerCase() !== email.toLowerCase()) {
+    // Case-insensitive email comparison - FIX: use order directly, not body.order
+    if (order.email.toLowerCase() !== email.toLowerCase()) {
       return res.status(403).json({
         error: 'Email Mismatch',
         message: 'The email address does not match our records for this order',
       });
     }
-
-    // Validate order status before proceeding
-    order = body.order;
     
     // Check if order is paid
     if (order.financial_status !== 'paid' && 

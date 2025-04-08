@@ -1,4 +1,5 @@
 // src/lib/services/returnService.js
+import mongoose from 'mongoose';
 import ReturnRequest from '@/lib/db/models/ReturnRequest';
 import connectToDatabase from '@/lib/db/connection';
 
@@ -40,14 +41,11 @@ export async function createReturnRequest(returnData) {
       status: returnData.status
     }, null, 2));
 
-    // Ensure the model exists
-    if (!mongoose.models.ReturnRequest) {
-      console.error('❌ ReturnRequest model is not defined!');
-      throw new Error('ReturnRequest model is not defined');
-    }
+    // Ensure the model is registered
+    const ReturnRequestModel = mongoose.models.ReturnRequest || mongoose.model('ReturnRequest');
 
     // Create the new return request
-    const newReturn = new ReturnRequest({
+    const newReturn = new ReturnRequestModel({
       ...returnData,
       createdAt: new Date(),
       updatedAt: new Date()

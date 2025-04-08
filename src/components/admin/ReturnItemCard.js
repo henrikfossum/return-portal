@@ -1,5 +1,6 @@
 // src/components/admin/ReturnItemCard.js
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Package, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Image from 'next/image';
@@ -12,10 +13,6 @@ export default function ReturnItemCard({
   onReject = null,
   onFlag = null
 }) {
-  // Add default empty object and safe property access
-  const customer = item.customer || {};
-  const name = customer.name ?? 'Guest Customer';
-  const email = customer.email ?? 'No email';
   // Track image loading state
   const [imageError, setImageError] = useState(false);
   
@@ -201,3 +198,42 @@ export default function ReturnItemCard({
     </Card>
   );
 }
+ReturnItemCard.propTypes = {
+  item: PropTypes.shape({
+    image: PropTypes.shape({
+      src: PropTypes.string
+    }),
+    imageUrl: PropTypes.string,
+    variant_image: PropTypes.string,
+    product_image: PropTypes.string,
+    title: PropTypes.string,
+    name: PropTypes.string,
+    variant_title: PropTypes.string,
+    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    quantity: PropTypes.number,
+    return_reason: PropTypes.string,
+    reason: PropTypes.string,
+    returnOption: PropTypes.oneOf(['return', 'exchange']),
+    exchangeDetails: PropTypes.shape({
+      originalSize: PropTypes.string,
+      newSize: PropTypes.string,
+      originalColor: PropTypes.string,
+      newColor: PropTypes.string
+    }),
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired
+  }).isRequired,
+  status: PropTypes.oneOf(['pending', 'approved', 'completed', 'rejected', 'flagged']),
+  showActions: PropTypes.bool,
+  onApprove: PropTypes.func,
+  onReject: PropTypes.func,
+  onFlag: PropTypes.func
+};
+
+// Default props to provide additional safety
+ReturnItemCard.defaultProps = {
+  status: 'pending',
+  showActions: true,
+  onApprove: null,
+  onReject: null,
+  onFlag: null
+};

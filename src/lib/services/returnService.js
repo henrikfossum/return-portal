@@ -8,7 +8,12 @@ import connectToDatabase from '@/lib/db/connection';
  * @returns {Promise<Object>} - Created return request
  */
 export async function createReturnRequest(returnData) {
-  console.log('📥 Starting createReturnRequest with tenantId:', returnData.tenantId);
+  console.log('💾 STARTING RETURN CREATION WITH DATA:', {
+    orderId: returnData.orderId,
+    orderNumber: returnData.orderNumber,
+    customerEmail: returnData.customer?.email,
+    itemCount: returnData.items?.length || 0
+  });
   
   try {
     // Connect to database first

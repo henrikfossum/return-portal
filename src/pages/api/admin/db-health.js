@@ -1,24 +1,14 @@
-// src/pages/api/admin/db-health.js
+// src/pages/api/dev/db-health.js
 import connectToDatabase from '@/lib/db/connection';
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
-  // Check for admin authorization using JWT
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authorization token required' });
-  }
-  const token = authHeader.split(' ')[1];
-
-  try {
-    jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'default-jwt-secret-replace-in-production'
-    );
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(401).json({ message: 'Invalid or expired token' });
+  // Only allow this endpoint in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return res.status(403).json({ 
+      error: 'Forbidden', 
+      message: 'This endpoint is only available in development mode'
+    });
   }
 
   if (req.method !== 'GET') {
@@ -44,19 +34,20 @@ export default async function handler(req, res) {
       99: 'uninitialized'
     };
     
-    // Get model information
-    const modelInfo = {};
-    Object.keys(mongoose.models).forEach(modelName => {
-      const model = mongoose.models[modelName];
-      modelInfo[modelName] = {
-        modelName,
-        collectionName: model.collection.name,
-        schema: Object.keys(model.schema.paths)
-      };
-    });
+    // Check for ReturnRequest model
+    const hasReturnRequestModel = !!mongoose.models.ReturnRequest;
+    
+    // Get basic model information without exposing details
+    const modelsList = Object.keys(mongoose.models);
     
     // Get database name
     const dbName = mongoose.connection.db?.databaseName || 'Unknown';
+    
+    // Check MONGODB_URI
+    const mongoURIExists = !!process.env.MONGODB_URI;
+    const mongoURIPattern = process.env.MONGODB_URI 
+      ? process.env.MONGODB_URI.replace(/mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/, 'mongodb$1://$2:****@')
+      : 'Not set';
     
     return res.status(200).json({
       status: 'success',
@@ -67,10 +58,15 @@ export default async function handler(req, res) {
         database: dbName,
         host: mongoose.connection.host || 'Unknown'
       },
-      models: modelInfo,
+      models: {
+        count: modelsList.length,
+        list: modelsList,
+        hasReturnRequestModel
+      },
       environment: {
         node_env: process.env.NODE_ENV,
-        mongodb_uri_exists: !!process.env.MONGODB_URI
+        mongodb_uri_exists: mongoURIExists,
+        mongodb_uri_pattern: mongoURIPattern
       }
     });
   } catch (error) {

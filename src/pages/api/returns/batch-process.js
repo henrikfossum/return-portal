@@ -4,7 +4,6 @@ import { getShopifyClientForTenant } from '@/lib/shopify/client';
 import { analyzeReturnFraud, getSettings, flagFraudulentReturn } from '@/lib/fraud/detection';
 import { withErrorHandler, createApiError, ErrorTypes, validateRequiredFields } from '@/lib/api/errorHandler';
 import { createReturnRequest } from '@/lib/services/returnService';
-import mongoose from 'mongoose';
 const DEBUG_MODE = true;
 
 /**

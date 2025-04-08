@@ -1,6 +1,5 @@
 // src/components/admin/ReturnItemCard.js
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 import { Package, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Image from 'next/image';
@@ -91,9 +90,10 @@ export default function ReturnItemCard({
         <div className="flex-grow">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-medium text-gray-900">
-                {item.title || item.name || 'Unknown Product'}
-              </h3>
+            <h3 className="text-sm font-medium text-gray-900">
+              {item.title || (item.name ? JSON.stringify(item.name) : 'Unknown Product')}
+            </h3>
+
               
               {item.variant_title && (
                 <p className="text-xs text-gray-500">{item.variant_title}</p>
@@ -198,42 +198,3 @@ export default function ReturnItemCard({
     </Card>
   );
 }
-ReturnItemCard.propTypes = {
-  item: PropTypes.shape({
-    image: PropTypes.shape({
-      src: PropTypes.string
-    }),
-    imageUrl: PropTypes.string,
-    variant_image: PropTypes.string,
-    product_image: PropTypes.string,
-    title: PropTypes.string,
-    name: PropTypes.string,
-    variant_title: PropTypes.string,
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    quantity: PropTypes.number,
-    return_reason: PropTypes.string,
-    reason: PropTypes.string,
-    returnOption: PropTypes.oneOf(['return', 'exchange']),
-    exchangeDetails: PropTypes.shape({
-      originalSize: PropTypes.string,
-      newSize: PropTypes.string,
-      originalColor: PropTypes.string,
-      newColor: PropTypes.string
-    }),
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired
-  }).isRequired,
-  status: PropTypes.oneOf(['pending', 'approved', 'completed', 'rejected', 'flagged']),
-  showActions: PropTypes.bool,
-  onApprove: PropTypes.func,
-  onReject: PropTypes.func,
-  onFlag: PropTypes.func
-};
-
-// Default props to provide additional safety
-ReturnItemCard.defaultProps = {
-  status: 'pending',
-  showActions: true,
-  onApprove: null,
-  onReject: null,
-  onFlag: null
-};

@@ -479,9 +479,22 @@ export default function ReturnDetail() {
                 returnData.items.map((item) => (
                   <ReturnItemCard
                     key={item.id} 
-                    item={item}
+                    item={{
+                      id: item.id,
+                      title: item.title,
+                      name: item.name,
+                      variant_title: item.variant_title,
+                      price: item.price,
+                      quantity: item.quantity,
+                      returnOption: item.returnOption,
+                      return_reason: item.return_reason || item.returnReason,
+                      exchangeDetails: item.exchangeDetails,
+                      image: item.image,
+                      imageUrl: item.imageUrl,
+                      variant_image: item.variant_image,
+                      product_image: item.product_image
+                    }}
                     status={returnData.status}
-                    // Only show item-level actions if needed
                     showActions={false}
                   />
                 ))
@@ -492,7 +505,7 @@ export default function ReturnDetail() {
               )}
             </div>
           </Card>
-          
+
           {/* Fraud Detection Results */}
           {fraudRisk.factors.length > 0 && (
             <Card title="Risk Assessment" padding="normal">

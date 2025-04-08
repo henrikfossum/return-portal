@@ -1,7 +1,8 @@
 // src/lib/services/returnService.js
 import ReturnRequest from '@/lib/db/models/ReturnRequest';
 import connectToDatabase from '@/lib/db/connection';
-
+import { createReturnRequest } from '@/lib/services/returnService';
+import mongoose from 'mongoose';
 /**
  * Create a new return request in the database
  * @param {Object} returnData - Return request data

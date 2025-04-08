@@ -102,6 +102,7 @@ export default function FraudPreventionDashboard() {
   
   // Load data on mount and when timeframe changes
   useEffect(() => {
+    console.log('Returns data:', returns);
     fetchFraudData(timeframe);
   }, [timeframe, fetchFraudData]);
   

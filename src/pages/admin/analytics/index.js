@@ -50,6 +50,8 @@ export default function AnalyticsDashboard() {
   
   // Load data on mount and when timeframe changes
   useEffect(() => {
+    console.log('Returns data:', returns);
+
     fetchAnalytics(timeframe);
   }, [timeframe, fetchAnalytics]);
   

@@ -12,6 +12,10 @@ export default function ReturnItemCard({
   onReject = null,
   onFlag = null
 }) {
+  // Add default empty object and safe property access
+  const customer = item.customer || {};
+  const name = customer.name ?? 'Guest Customer';
+  const email = customer.email ?? 'No email';
   // Track image loading state
   const [imageError, setImageError] = useState(false);
   

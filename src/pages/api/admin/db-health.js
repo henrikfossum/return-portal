@@ -1,13 +1,19 @@
-// src/pages/api/dev/db-health.js
+// src/pages/api/health/db-check.js
 import connectToDatabase from '@/lib/db/connection';
 import mongoose from 'mongoose';
 
+// This is a simple API key approach - in a real production app, 
+// you might want to use environment variables for this
+const API_KEY = 'return_portal_health_check_key';
+
 export default async function handler(req, res) {
-  // Only allow this endpoint in development mode
-  if (process.env.NODE_ENV !== 'development') {
+  // Check for API key in query parameter
+  const providedKey = req.query.key;
+  
+  if (!providedKey || providedKey !== API_KEY) {
     return res.status(403).json({ 
       error: 'Forbidden', 
-      message: 'This endpoint is only available in development mode'
+      message: 'Invalid or missing API key'
     });
   }
 
@@ -37,8 +43,24 @@ export default async function handler(req, res) {
     // Check for ReturnRequest model
     const hasReturnRequestModel = !!mongoose.models.ReturnRequest;
     
-    // Get basic model information without exposing details
-    const modelsList = Object.keys(mongoose.models);
+    // Get model information if requested
+    let modelInfo = { count: Object.keys(mongoose.models).length };
+    if (req.query.details === 'true') {
+      modelInfo.list = {};
+      Object.keys(mongoose.models).forEach(modelName => {
+        try {
+          const model = mongoose.models[modelName];
+          modelInfo.list[modelName] = {
+            collectionName: model.collection.name,
+            schema: Object.keys(model.schema.paths)
+          };
+        } catch (err) {
+          modelInfo.list[modelName] = {error: err.message};
+        }
+      });
+    } else {
+      modelInfo.models = Object.keys(mongoose.models);
+    }
     
     // Get database name
     const dbName = mongoose.connection.db?.databaseName || 'Unknown';
@@ -59,8 +81,7 @@ export default async function handler(req, res) {
         host: mongoose.connection.host || 'Unknown'
       },
       models: {
-        count: modelsList.length,
-        list: modelsList,
+        ...modelInfo,
         hasReturnRequestModel
       },
       environment: {
@@ -75,7 +96,8 @@ export default async function handler(req, res) {
       status: 'error',
       message: 'Database connection failed',
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      mongoURI_exists: !!process.env.MONGODB_URI
     });
   }
 }

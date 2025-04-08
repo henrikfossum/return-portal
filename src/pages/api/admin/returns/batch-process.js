@@ -262,27 +262,22 @@ export default async function handler(req, res) {
         }
 
         // Save to database with additional logging
-        try {
-          console.log('💾 Attempting to save return request to database', {
-            orderId: returnData.orderId,
-            orderNumber: returnData.orderNumber,
-            itemCount: returnData.items.length
-          });
-
-          const savedReturn = await createReturnRequest(returnData);
-          
-          console.log('✅ Return request saved successfully', {
-            savedReturnId: savedReturn._id,
-            savedOrderNumber: savedReturn.orderNumber
-          });
-        } catch (dbError) {
-          console.error('❌ Error saving return to database:', {
-            message: dbError.message,
-            name: dbError.name,
-            stack: dbError.stack
-          });
-          // Continue processing even if database save fails
-        }
+        console.log('💾 Attempting to save return request to database', {
+          orderId: returnData.orderId,
+          orderNumber: returnData.orderNumber,
+          itemCount: returnData.items?.length,
+          tenantId: returnData.tenantId
+        });
+        
+        // Important: Don't catch here, let the error propagate to the main try/catch
+        // This will make sure we don't process a return if we can't save it
+        const savedReturn = await createReturnRequest(returnData);
+        
+        console.log('✅ Return request saved successfully', {
+          savedReturnId: savedReturn._id,
+          savedOrderNumber: savedReturn.orderNumber,
+          savedItemCount: savedReturn.items?.length
+        });
         
         results.push({
           lineItemId,

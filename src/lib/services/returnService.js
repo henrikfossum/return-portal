@@ -8,22 +8,52 @@ import connectToDatabase from '@/lib/db/connection';
  * @returns {Promise<Object>} - Created return request
  */
 export async function createReturnRequest(returnData) {
-  await connectToDatabase();
+  console.log('📥 Starting createReturnRequest with tenantId:', returnData.tenantId);
   
   try {
+    // Connect to database first
+    console.log('🔌 Connecting to database...');
+    await connectToDatabase();
+    console.log('✅ Database connection successful');
+    
+    // Validate required fields before attempting to create
+    if (!returnData.orderId) {
+      throw new Error('Missing required field: orderId');
+    }
+    
+    if (!returnData.items || !Array.isArray(returnData.items) || returnData.items.length === 0) {
+      throw new Error('Missing or invalid items array');
+    }
+    
+    // Log what we're trying to create
     console.log('🚀 Creating Return Request with Data:', JSON.stringify({
       orderId: returnData.orderId,
       orderNumber: returnData.orderNumber,
       customerEmail: returnData.customer?.email,
       itemCount: returnData.items?.length,
-      tenantId: returnData.tenantId
+      tenantId: returnData.tenantId,
+      status: returnData.status
     }, null, 2));
 
+    // Ensure the model exists
+    if (!mongoose.models.ReturnRequest) {
+      console.error('❌ ReturnRequest model is not defined!');
+      throw new Error('ReturnRequest model is not defined');
+    }
+
+    // Create the new return request
     const newReturn = new ReturnRequest({
       ...returnData,
       createdAt: new Date(),
       updatedAt: new Date()
     });
+    
+    // Validate the model before saving
+    const validationError = newReturn.validateSync();
+    if (validationError) {
+      console.error('❌ Validation failed before save:', validationError);
+      throw validationError;
+    }
     
     console.log('🔍 Mongoose Model Before Save:', JSON.stringify({
       modelId: newReturn._id,
@@ -31,6 +61,8 @@ export async function createReturnRequest(returnData) {
       itemIds: newReturn.items?.map(item => item.id)
     }, null, 2));
 
+    // Save to database
+    console.log('💾 Attempting to save to database...');
     const savedReturn = await newReturn.save();
     
     console.log('✅ Return Saved Successfully:', JSON.stringify({
@@ -48,14 +80,18 @@ export async function createReturnRequest(returnData) {
       stack: error.stack
     });
 
-    // If it's a validation error, log specific details
+    // More detailed error handling based on error type
     if (error.name === 'ValidationError') {
       console.error('🚨 Validation Errors:', 
-        Object.keys(error.errors).map(key => ({
+        Object.keys(error.errors || {}).map(key => ({
           path: key,
           message: error.errors[key].message
         }))
       );
+    } else if (error.name === 'MongoServerError' && error.code === 11000) {
+      console.error('🚨 Duplicate Key Error:', error.keyValue);
+    } else if (error.name === 'MongoNetworkError') {
+      console.error('🚨 Database Connection Error. Check your MongoDB connection.');
     }
 
     throw error;

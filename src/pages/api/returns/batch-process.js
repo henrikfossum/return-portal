@@ -3,6 +3,7 @@ import { processReturn, processExchange } from '@/lib/shopify/returns';
 import { getShopifyClientForTenant } from '@/lib/shopify/client';
 import { analyzeReturnFraud, getSettings, flagFraudulentReturn } from '@/lib/fraud/detection';
 import { withErrorHandler, createApiError, ErrorTypes, validateRequiredFields } from '@/lib/api/errorHandler';
+const DEBUG_MODE = true;
 
 /**
  * Rate limiting implementation for batch processing
@@ -269,105 +270,210 @@ async function batchProcessHandler(req, res) {
       }
     }
     
-    // Process the returns/exchanges (proceed even if medium risk, but flagged for review)
     const results = [];
     const processedIds = new Set(); // Track processed items to prevent duplicates
+    
+    console.log('🔄 Starting item processing', { totalItems: items.length });
     
     for (const item of items) {
       const { id: lineItemId, orderId, returnOption, exchangeDetails } = item;
       
       // Skip if we've already processed this item
       if (processedIds.has(lineItemId)) {
-        console.log(`Skipping duplicate item: ${lineItemId}`);
+        console.log(`⏩ Skipping duplicate item: ${lineItemId}`);
         continue;
       }
       
       processedIds.add(lineItemId);
       
       try {
+        let processResult;
+        let returnData;
+  
         if (returnOption === 'exchange' && exchangeDetails) {
-          // Process exchange
-          const exchangeResult = await processExchange(
+          console.log('🔄 Processing exchange', {
+            lineItemId,
+            orderId,
+            variantId: exchangeDetails.variantId,
+            quantity: item.quantity || 1
+          });
+          
+          // Process exchange 
+          processResult = await processExchange(
             orderId,
             lineItemId,
             exchangeDetails.variantId,
             item.quantity || 1
           );
-          
-          results.push({
-            lineItemId,
-            type: 'exchange',
-            success: true,
-            data: exchangeResult
-          });
         } else {
+          console.log('🔙 Processing return', {
+            lineItemId,
+            orderId,
+            quantity: item.quantity || 1
+          });
+          
           // Process return
-          const returnResult = await processReturn(
+          processResult = await processReturn(
             orderId,
             lineItemId,
             item.quantity || 1
           );
+        }
+  
+        // Build the return data object
+        returnData = {
+          orderId: orderId,
+          orderNumber: order.order_number,
+          shopifyOrderId: order.id,
+          customer: {
+            name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest Customer',
+            email: order.email,
+            phone: order.customer?.phone
+          },
+          status: 'pending', // Initial status
+          items: items.map(item => {
+            // Find the original item in the order
+            const orderItem = order.line_items.find(li => li.id.toString() === item.id.toString());
+            return {
+              id: item.id,
+              title: orderItem?.title || 'Unknown Item',
+              variant_title: orderItem?.variant_title || '',
+              price: parseFloat(orderItem?.price || 0),
+              quantity: item.quantity || 1,
+              returnOption: item.returnOption,
+              returnReason: item.returnReason || { reason: 'Not specified' },
+              exchangeDetails: item.returnOption === 'exchange' ? item.exchangeDetails : null
+            };
+          }),
+          createdAt: new Date(),
+          tenantId: tenantId
+        };
+  
+        // Save to database with enhanced logging
+        console.log('💾 ATTEMPTING DATABASE SAVE:', {
+          orderId: returnData.orderId,
+          email: returnData.customer?.email,
+          items: returnData.items?.length,
+          tenantId: returnData.tenantId,
+          mongodbUriExists: !!process.env.MONGODB_URI
+        });
+        
+        try {
+          const savedReturn = await createReturnRequest(returnData);
+          
+          console.log('✅ DATABASE SAVE SUCCESSFUL:', {
+            savedReturnId: savedReturn._id,
+            savedOrderNumber: savedReturn.orderNumber
+          });
           
           results.push({
             lineItemId,
-            type: 'return',
+            type: returnOption,
             success: true,
-            data: returnResult
+            data: processResult,
+            dbSuccess: true
           });
+        } catch (dbError) {
+          console.error('❌ DATABASE SAVE FAILED:', {
+            error: dbError.message,
+            name: dbError.name,
+            code: dbError.code,
+            stack: DEBUG_MODE ? dbError.stack : undefined
+          });
+          
+          // Continue with the process - add success for the item but mark database as failed
+          results.push({
+            lineItemId,
+            type: returnOption,
+            success: true, // Still mark the item as processed successfully
+            data: processResult,
+            dbSuccess: false,
+            dbError: dbError.message
+          });
+          
+          if (DEBUG_MODE) {
+            // In debug mode, return detailed error
+            return res.status(207).json({
+              status: 'partialSuccess',
+              message: 'Return processed but database save failed',
+              error: dbError.message,
+              errorName: dbError.name,
+              stack: dbError.stack,
+              results
+            });
+          }
         }
       } catch (itemError) {
-        // Handle item-specific errors
-        const errorDetails = {
-          lineItemId,
-          type: returnOption,
-          message: itemError.message || 'Unknown error'
-        };
-        
-        // Add detailed error information for API errors
-        if (itemError.code && itemError.status) {
-          errorDetails.code = itemError.code;
-          errorDetails.status = itemError.status;
-          if (itemError.details) errorDetails.details = itemError.details;
-        }
+        console.error(`❌ Error processing item ${lineItemId}:`, {
+          message: itemError.message,
+          name: itemError.name,
+          stack: DEBUG_MODE ? itemError.stack : undefined
+        });
         
         results.push({
           lineItemId,
           type: returnOption,
           success: false,
-          error: errorDetails
+          error: itemError.message
         });
       }
     }
-
+  
     // Check if any operations failed
     const hasFailures = results.some(result => !result.success);
+    const hasDbFailures = results.some(result => result.success && !result.dbSuccess);
     
-    // Return appropriate response
+    console.log('🏁 Batch processing complete', {
+      totalItems: items.length,
+      processedItems: results.length,
+      successfulItems: results.filter(r => r.success).length,
+      failedItems: results.filter(r => !r.success).length,
+      dbSuccessItems: results.filter(r => r.dbSuccess).length,
+      dbFailedItems: results.filter(r => r.success && !r.dbSuccess).length
+    });
+  
+    // Return response with fraud detection info
     if (hasFailures) {
-      // Return 207 Multi-Status for partial success
+      console.warn('⚠️ Some items could not be processed');
+      
       return res.status(207).json({
         status: 'partialSuccess',
         message: 'Some items could not be processed.',
         results,
+        dbSuccess: !hasDbFailures,
         fraudDetection: {
           isHighRisk: fraudDetection.isHighRisk,
+          riskFactors: fraudDetection.riskFactors,
           riskScore: fraudDetection.riskScore || 0
         }
       });
     }
-
+  
     return res.status(200).json({
       status: 'success',
-      message: 'All items processed successfully',
+      message: 'All items processed successfully' + (hasDbFailures ? ' but database save failed' : ''),
       results,
+      dbSuccess: !hasDbFailures,
       fraudDetection: {
         isHighRisk: fraudDetection.isHighRisk,
+        riskFactors: fraudDetection.riskFactors,
         riskScore: fraudDetection.riskScore || 0
       }
     });
+  
   } catch (error) {
-    // The error will be handled by the withErrorHandler middleware
-    throw error;
+    console.error('❌ Critical error in batch processing:', {
+      message: error.message,
+      name: error.name,
+      stack: DEBUG_MODE ? error.stack : undefined
+    });
+    
+    return res.status(500).json({
+      error: 'Server Error',
+      message: error.message,
+      stack: DEBUG_MODE ? error.stack : undefined,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 

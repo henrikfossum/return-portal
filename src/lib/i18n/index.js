@@ -26,7 +26,30 @@ export function useLocale() {
 export function LocaleProvider({ children, tenantId = 'default' }) {
   const [locale, setLocale] = useState('en');
   const [messages, setMessages] = useState(translations.en);
-  const [supportedLocales, setSupportedLocales] = useState(['en', 'no']);
+  // Removed unused supportedLocales state
+  
+  // Function to change language - moved up before useEffect that depends on it
+  const changeLocale = useCallback((newLocale) => {
+    if (translations[newLocale]) {
+      console.log(`Changing locale to ${newLocale}`);
+      setLocale(newLocale);
+      setMessages(translations[newLocale]);
+      // Save preference in localStorage
+      localStorage.setItem('preferredLocale', newLocale);
+      
+      // Force a re-render of the whole app
+      document.documentElement.lang = newLocale;
+      
+      // Also update any date/number formatting
+      try {
+        document.documentElement.setAttribute('data-locale', newLocale);
+      } catch (e) {
+        console.warn('Error setting locale attribute:', e);
+      }
+    } else {
+      console.error(`Locale ${newLocale} is not supported`);
+    }
+  }, []);
   
   // Initialize locale based on tenant settings and/or browser language
   useEffect(() => {
@@ -64,30 +87,7 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
     }
     
     initLocale();
-  }, [tenantId]);
-  
-  // Function to change language
-  const changeLocale = useCallback((newLocale) => {
-    if (translations[newLocale]) {
-      console.log(`Changing locale to ${newLocale}`);
-      setLocale(newLocale);
-      setMessages(translations[newLocale]);
-      // Save preference in localStorage
-      localStorage.setItem('preferredLocale', newLocale);
-      
-      // Force a re-render of the whole app
-      document.documentElement.lang = newLocale;
-      
-      // Also update any date/number formatting
-      try {
-        document.documentElement.setAttribute('data-locale', newLocale);
-      } catch (e) {
-        console.warn('Error setting locale attribute:', e);
-      }
-    } else {
-      console.error(`Locale ${newLocale} is not supported`);
-    }
-  }, []);
+  }, [tenantId, changeLocale]); // Added changeLocale to dependency array
   
   // Translation function with enhanced fallback and debugging
   const t = useCallback((key, params = {}) => {

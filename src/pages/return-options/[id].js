@@ -247,7 +247,7 @@ export default function ReturnOptions() {
                       </span>
                       <span className="text-sm return-portal-text-secondary">
                         <Trans i18nKey="return.returnOptions.exchangeDescription">
-                          We'll ship a replacement product to you
+                          We&apos;ll ship a replacement product to you
                         </Trans>
                       </span>
                     </div>

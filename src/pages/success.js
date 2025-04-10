@@ -74,7 +74,7 @@ export default function Success() {
             </motion.h2>
             <motion.p variants={itemVariants} className="return-portal-text-secondary">
               <Trans i18nKey="return.success.message">
-                Your return/exchange request has been successfully submitted. We'll email you with the next steps.
+                Your return/exchange request has been successfully submitted. We&apos;ll email you with the next steps.
               </Trans>
             </motion.p>
           </div>
@@ -107,7 +107,7 @@ export default function Success() {
                   </p>
                   <p className="text-sm mt-1 return-portal-text-secondary">
                     <Trans i18nKey="return.success.steps.email.description">
-                      You'll receive a confirmation email with a shipping label and instructions.
+                      You&apos;ll receive a confirmation email with a shipping label and instructions.
                     </Trans>
                   </p>
                 </div>
@@ -147,7 +147,7 @@ export default function Success() {
                   </p>
                   <p className="text-sm mt-1 return-portal-text-secondary">
                     <Trans i18nKey="return.success.steps.package.description">
-                      Place the items you're returning in their original packaging if possible.
+                      Place the items you&apos;re returning in their original packaging if possible.
                     </Trans>
                   </p>
                 </div>

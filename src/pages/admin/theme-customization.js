@@ -10,7 +10,8 @@ import Image from 'next/image';
 
 export default function ThemeCustomization() {
   const { authFetch } = useAdmin();
-  const { theme: currentTheme, updateTheme, loadTheme } = useTheme();
+  const { theme: currentTheme, updateTheme } = useTheme();
+  // Removed 'loadTheme' as it's not used
   
   const [settings, setSettings] = useState({
     primaryColor: '#4f46e5',

@@ -71,7 +71,7 @@ export default function Button({
     const secondaryColor = theme?.secondaryColor || 'var(--theme-secondary-color, #f59e0b)';
     const successColor = theme?.successColor || 'var(--theme-success-color, #10b981)';
     const dangerColor = theme?.dangerColor || 'var(--theme-danger-color, #ef4444)';
-    const textColor = theme?.textColor || 'var(--theme-text-color, #171717)';
+    // Removed unused textColor variable
     
     // Variant-specific styles
     switch (variant) {

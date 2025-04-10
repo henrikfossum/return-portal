@@ -120,7 +120,7 @@ export default function ReturnReason() {
           </h2>
           <p className="text-sm mt-1 return-portal-text-secondary">
             <Trans i18nKey="return.returnReason.subtitle">
-              Please tell us the reason you're returning this item
+              Please tell us the reason you&apos;re returning this item
             </Trans>
           </p>
         </div>

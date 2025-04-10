@@ -170,7 +170,7 @@ export default function OrderDetails() {
           
           <p className="text-sm text-gray-700 mt-4 return-portal-text">
             <Trans i18nKey="return.orderDetails.chooseItems">
-              Choose the items you'd like to return or exchange. Only eligible items can be selected.
+              Choose the items you&apos;d like to return or exchange. Only eligible items can be selected.
             </Trans>
           </p>
         </div>
@@ -195,7 +195,7 @@ export default function OrderDetails() {
               </h3>
               <p className="text-yellow-700 max-w-md">
                 <Trans i18nKey="return.orderDetails.noEligibleItemsMessage">
-                  We couldn't find any eligible items for return in this order.
+                  We couldn&apos;t find any eligible items for return in this order.
                 </Trans>
               </p>
             </div>

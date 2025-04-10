@@ -1,4 +1,4 @@
-// src/pages/admin/theme-customization.js - Enhanced with better theme application
+// src/pages/admin/theme-customization.js - Fixed version
 import React, { useState, useEffect } from 'react';
 import { Save, Eye, RefreshCw } from 'lucide-react';
 import AdminLayout from '@/components/admin/Layout';
@@ -11,7 +11,6 @@ import Image from 'next/image';
 export default function ThemeCustomization() {
   const { authFetch } = useAdmin();
   const { theme: currentTheme, updateTheme } = useTheme();
-  // Removed 'loadTheme' as it's not used
   
   const [settings, setSettings] = useState({
     primaryColor: '#4f46e5',
@@ -32,13 +31,15 @@ export default function ThemeCustomization() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Add a flag to prevent initial theme sync causing an infinite loop
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Use the theme context to load settings
+  // Load settings ONCE when component mounts
   useEffect(() => {
     async function loadSettings() {
       setLoading(true);
       try {
-        // First, load from theme context
+        // First, check if we have theme data in context
         if (currentTheme) {
           setSettings(currentTheme);
         }
@@ -49,7 +50,7 @@ export default function ThemeCustomization() {
           const data = await response.json();
           setSettings(data);
           
-          // Update theme context with server data
+          // Only update theme context during initial load
           updateTheme(data);
           
           // Also update localStorage manually for backward compatibility
@@ -62,20 +63,27 @@ export default function ThemeCustomization() {
         setMessage({ type: 'error', text: 'Failed to load settings' });
       } finally {
         setLoading(false);
+        setInitialLoadComplete(true);
       }
     }
     
     loadSettings();
-  }, [authFetch, currentTheme, updateTheme]);
+    // Remove dependencies that cause infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Apply theme changes in real-time as user modifies settings
+  // Apply theme changes in real-time only after initial load is complete
+  // and only when user makes changes (not during initial data fetch)
   useEffect(() => {
-    // Skip initial render
-    if (loading) return;
+    if (!initialLoadComplete || loading) return;
     
     // Apply theme changes in real-time without saving to server
-    updateTheme(settings);
-  }, [settings, loading, updateTheme]);
+    const timeoutId = setTimeout(() => {
+      updateTheme(settings);
+    }, 300); // Add debounce to prevent too many updates
+    
+    return () => clearTimeout(timeoutId);
+  }, [settings, loading, updateTheme, initialLoadComplete]);
 
   // Handle saving settings
   const handleSave = async () => {
@@ -343,6 +351,7 @@ export default function ThemeCustomization() {
 
           {/* Typography Section */}
           <Card title="Typography" padding="normal">
+            {/* Rest of the component remains unchanged */}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Font Family</label>
@@ -436,11 +445,9 @@ export default function ThemeCustomization() {
                 <div className="mt-2 p-4 bg-gray-50 rounded-md">
                   <p className="text-sm mb-2">Logo Preview:</p>
                   <div className="relative h-16 w-full flex items-center justify-center bg-white rounded border border-gray-200 p-2">
-                    <Image 
+                    <img 
                       src={settings.logo} 
                       alt="Logo Preview"
-                      width={150}
-                      height={50}
                       className="max-h-12 object-contain"
                       onError={(e) => {
                         e.target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%2250%22%20viewBox%3D%220%200%20150%2050%22%3E%3Crect%20fill%3D%22%23ddd%22%20width%3D%22150%22%20height%3D%2250%22%2F%3E%3Ctext%20fill%3D%22%23666%22%20font-family%3D%22sans-serif%22%20font-size%3D%2212%22%20dy%3D%220.3em%22%20text-anchor%3D%22middle%22%20x%3D%2275%22%20y%3D%2225%22%3EInvalid%20Image%3C%2Ftext%3E%3C%2Fsvg%3E';

@@ -64,10 +64,39 @@ export default function ReturnItemCard({
     return null;
   };
 
+  // Safely get item name as a string
+  const getItemName = () => {
+    if (item.title) return item.title;
+    if (typeof item.name === 'string') return item.name;
+    if (item.name && typeof item.name === 'object') {
+      try {
+        return JSON.stringify(item.name);
+      } catch (e) {
+        return 'Unknown Product';
+      }
+    }
+    return 'Unknown Product';
+  };
+
+  // Safely get return reason as a string
+  const getReturnReason = () => {
+    if (typeof item.return_reason === 'string') return item.return_reason;
+    if (item.return_reason && typeof item.return_reason === 'object' && item.return_reason.reason) {
+      return item.return_reason.reason;
+    }
+    if (typeof item.reason === 'string') return item.reason;
+    if (item.reason && typeof item.reason === 'object' && item.reason.reason) {
+      return item.reason.reason;
+    }
+    return '';
+  };
+
   const imageUrl = getImageUrl();
   const price = parseFloat(item.price || 0);
   const quantity = item.quantity || 1;
   const totalPrice = price * quantity;
+  const itemName = getItemName();
+  const returnReason = getReturnReason();
 
   return (
     <Card padding="normal" className="overflow-visible">
@@ -75,9 +104,9 @@ export default function ReturnItemCard({
         {/* Product Image or Icon */}
         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 mr-4 flex items-center justify-center">
           {imageUrl && !imageError ? (
-            <Image
+            <img
               src={imageUrl}
-              alt={item.title || item.name || 'Product'}
+              alt={itemName}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
             />
@@ -90,10 +119,9 @@ export default function ReturnItemCard({
         <div className="flex-grow">
           <div className="flex items-start justify-between">
             <div>
-            <h3 className="text-sm font-medium text-gray-900">
-              {item.title || (item.name ? JSON.stringify(item.name) : 'Unknown Product')}
-            </h3>
-
+              <h3 className="text-sm font-medium text-gray-900">
+                {itemName}
+              </h3>
               
               {item.variant_title && (
                 <p className="text-xs text-gray-500">{item.variant_title}</p>
@@ -109,11 +137,11 @@ export default function ReturnItemCard({
               </div>
 
               {/* Return Reason */}
-              {item.return_reason || item.reason ? (
+              {returnReason && (
                 <div className="mt-1 text-xs text-gray-500">
-                  <span className="font-medium">Reason:</span> {item.return_reason || item.reason}
+                  <span className="font-medium">Reason:</span> {returnReason}
                 </div>
-              ) : null}
+              )}
             </div>
 
             {/* Status Badge */}
@@ -146,10 +174,13 @@ export default function ReturnItemCard({
               {/* Exchange Details */}
               {item.returnOption === 'exchange' && item.exchangeDetails && (
                 <div className="mt-1 text-xs text-gray-600 p-1 bg-blue-50 rounded border border-blue-100">
-                  <p>
-                    Size: <span className="line-through">{item.exchangeDetails.originalSize}</span> → <span className="font-medium">{item.exchangeDetails.newSize}</span>
-                  </p>
-                  {item.exchangeDetails.newColor !== item.exchangeDetails.originalColor && (
+                  {item.exchangeDetails.originalSize && item.exchangeDetails.newSize && (
+                    <p>
+                      Size: <span className="line-through">{item.exchangeDetails.originalSize}</span> → <span className="font-medium">{item.exchangeDetails.newSize}</span>
+                    </p>
+                  )}
+                  {item.exchangeDetails.originalColor && item.exchangeDetails.newColor && 
+                   item.exchangeDetails.newColor !== item.exchangeDetails.originalColor && (
                     <p>
                       Color: <span className="line-through">{item.exchangeDetails.originalColor}</span> → <span className="font-medium">{item.exchangeDetails.newColor}</span>
                     </p>

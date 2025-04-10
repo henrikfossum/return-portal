@@ -128,11 +128,15 @@ export default function AdminDashboard() {
                       </td>
                       {/* *** CUSTOMER COLUMN - MAKE THIS CHANGE *** */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}
+                        {typeof ret.customer === 'object' && ret.customer !== null ? 
+                          ret.customer.name : 
+                          (ret.customer || 'Unknown Customer')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(ret.date).toLocaleDateString()}
+                        {ret.createdAt ? new Date(ret.createdAt).toLocaleDateString() : 
+                        (ret.date ? new Date(ret.date).toLocaleDateString() : 'N/A')}
                       </td>
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded-full font-medium
                           ${ret.status === 'pending' ? 'bg-amber-100 text-amber-800' : ''}

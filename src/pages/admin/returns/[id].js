@@ -475,34 +475,59 @@ export default function ReturnDetail() {
           {/* Returned items */}
           <Card title="Return Items" padding="normal">
             <div className="space-y-4">
-              {returnData.items && returnData.items.length > 0 ? (
-                returnData.items.map((item) => (
-                  <ReturnItemCard
-                    key={item.id} 
-                    item={{
-                      id: item.id,
-                      title: item.title,
-                      name: item.name,
-                      variant_title: item.variant_title,
-                      price: item.price,
-                      quantity: item.quantity,
-                      returnOption: item.returnOption,
-                      return_reason: item.return_reason || item.returnReason,
-                      exchangeDetails: item.exchangeDetails,
-                      image: item.image,
-                      imageUrl: item.imageUrl,
-                      variant_image: item.variant_image,
-                      product_image: item.product_image
-                    }}
-                    status={returnData.status}
-                    showActions={false}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  No items found for this return
-                </div>
-              )}
+            {returnData.items && returnData.items.length > 0 ? (
+  returnData.items.map((item) => {
+    // For debugging
+    console.log('Item data:', item);
+    
+    // Format the return reason properly
+    let returnReason = "";
+    if (item.returnReason) {
+      // If returnReason is an object with a reason property
+      if (typeof item.returnReason === 'object' && item.returnReason.reason) {
+        returnReason = item.returnReason.reason;
+      } else if (typeof item.returnReason === 'string') {
+        returnReason = item.returnReason;
+      }
+    } else if (item.return_reason) {
+      // Same check for return_reason
+      if (typeof item.return_reason === 'object' && item.return_reason.reason) {
+        returnReason = item.return_reason.reason;
+      } else if (typeof item.return_reason === 'string') {
+        returnReason = item.return_reason;
+      }
+    }
+    
+    return (
+      <ReturnItemCard
+        key={item.id || item._id} 
+        item={{
+          id: item.id || item._id,
+          title: item.title || "Unknown Item",
+          name: item.name,
+          variant_title: item.variant_title || "",
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          returnOption: item.returnOption || "return",
+          // Pass a string instead of an object
+          return_reason: returnReason,
+          // Make sure exchangeDetails is handled properly
+          exchangeDetails: item.exchangeDetails || null,
+          image: item.image,
+          imageUrl: item.imageUrl,
+          variant_image: item.variant_image,
+          product_image: item.product_image
+        }}
+        status={returnData.status}
+        showActions={false}
+      />
+    );
+  })
+) : (
+  <div className="text-center py-4 text-gray-500">
+    No items found for this return
+  </div>
+)}
             </div>
           </Card>
 

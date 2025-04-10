@@ -1,4 +1,33 @@
+// src/pages/api/admin/returns/[id].js
 import jwt from 'jsonwebtoken';
+import { getReturnById, updateReturnStatus } from '@/lib/services/returnService';
+
+// Helper to transform MongoDB document to UI-friendly format
+function transformReturnData(returnData) {
+  if (!returnData) return null;
+  
+  // Convert MongoDB document to plain object if necessary
+  const returnObject = typeof returnData.toObject === 'function' ? 
+    returnData.toObject() : returnData;
+  
+  // Calculate the total of all items
+  const totalValue = Array.isArray(returnObject.items) ? 
+    returnObject.items.reduce((sum, item) => sum + (parseFloat(item.price || 0) * item.quantity), 0) : 0;
+
+  // Transform into UI expected format
+  return {
+    id: returnObject._id.toString(),
+    order_id: returnObject.orderNumber || returnObject.orderId,
+    email: returnObject.customer?.email,
+    customer: returnObject.customer,
+    date: returnObject.createdAt,
+    created_at: returnObject.createdAt,
+    total_refund: totalValue,
+    status: returnObject.status,
+    // Preserve original properties
+    ...returnObject
+  };
+}
 
 export default async function handler(req, res) {
   // Check for admin authorization using JWT
@@ -39,7 +68,10 @@ export default async function handler(req, res) {
         });
       }
       
-      return res.status(200).json(returnData);
+      // Transform the data for UI consumption
+      const transformedData = transformReturnData(returnData);
+      
+      return res.status(200).json(transformedData);
     } catch (err) {
       console.error(`GET /returns/${id} error:`, err);
       return res.status(500).json({
@@ -60,13 +92,13 @@ export default async function handler(req, res) {
       
       const updatedReturn = await updateReturnStatus(id, status, adminNotes, 'admin');
       
-      // After updating in database, also update in Shopify if needed
-      // Keep your existing Shopify update code here
+      // Transform the updated data for UI
+      const transformedData = transformReturnData(updatedReturn);
       
       return res.status(200).json({
         success: true,
         message: `Return status updated to ${status}`,
-        return: updatedReturn
+        return: transformedData
       });
     } catch (err) {
       console.error(`PATCH /returns/${id} error:`, err);

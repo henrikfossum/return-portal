@@ -1,4 +1,4 @@
-// src/components/return/ReturnLayout.js
+// Improved ReturnLayout.js with better theme variable usage
 import React from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
@@ -65,13 +65,30 @@ export default function ReturnLayout({
     no: 'Norsk'
   };
 
+  // Create theme-based inline styles
+  const containerStyle = {
+    backgroundColor: theme?.backgroundColor || 'var(--theme-background-color, #ffffff)',
+    color: theme?.textColor || 'var(--theme-text-color, #171717)',
+  };
+  
+  const headingStyle = {
+    color: theme?.primaryColor || 'var(--theme-primary-color, #4f46e5)',
+    fontFamily: theme?.headingFontFamily || 'var(--theme-heading-font-family, var(--font-family-heading))'
+  };
+  
+  const subtitleStyle = {
+    color: theme?.secondaryTextColor || 'var(--theme-secondary-text-color, #6b7280)'
+  };
+  
+  const cardStyle = {
+    backgroundColor: theme?.cardBackground || 'var(--theme-card-background, #ffffff)',
+    borderColor: theme?.borderColor || 'var(--theme-border-color, #e5e7eb)'
+  };
+
   return (
     <div 
-      className={`w-full min-h-screen flex flex-col ${className}`} 
-      style={{ 
-        backgroundColor: theme?.backgroundColor || 'var(--color-background, #ffffff)',
-        color: theme?.textColor || 'var(--color-text, #000000)'
-      }}
+      className={`w-full min-h-screen flex flex-col return-portal-container ${className}`} 
+      style={containerStyle}
     >
       <Head>
         <title>{title} | {t('return.title')}</title>
@@ -104,15 +121,12 @@ export default function ReturnLayout({
           )}
         
           <h1 
-            className="text-2xl font-bold"
-            style={{ 
-              color: theme?.primaryColor || 'var(--color-primary, #4f46e5)',
-              fontFamily: theme?.headingFontFamily || 'var(--font-family-heading)'
-            }}
+            className="text-2xl font-bold return-portal-heading"
+            style={headingStyle}
           >
-            {title}
+            {t('return.title', title)}
           </h1>
-          <p className="mt-1 text-gray-800 text-sm" style={{ color: theme?.secondaryTextColor || 'var(--color-text-secondary)' }}>
+          <p className="mt-1 text-sm return-portal-text-secondary" style={subtitleStyle}>
             {t('return.intro.subtitle')}
           </p>
         </motion.div>
@@ -123,8 +137,8 @@ export default function ReturnLayout({
             <select
               value={locale}
               onChange={(e) => changeLocale(e.target.value)}
-              className="text-xs border border-gray-300 rounded px-2 py-1"
-              style={{ borderColor: theme?.borderColor || 'var(--color-border)' }}
+              className="text-xs border rounded px-2 py-1"
+              style={{ borderColor: theme?.borderColor || 'var(--theme-border-color)' }}
             >
               {supportedLocales.map(code => (
                 <option key={code} value={code}>
@@ -139,14 +153,14 @@ export default function ReturnLayout({
         {!hideProgressSteps && (
           <motion.div variants={childVariants} className="mb-4">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-base font-medium"
-                style={{ color: theme?.textColor || 'var(--color-text)' }}>
+              <h2 className="text-base font-medium return-portal-text"
+                style={{ color: theme?.textColor || 'var(--theme-text-color)' }}>
                 {t(`return.steps.${steps[currentStep-1]?.name}`)}
               </h2>
               <span className="text-xs bg-gray-100 px-2 py-1 rounded-full"
                 style={{ 
-                  color: theme?.secondaryTextColor || 'var(--color-text-secondary)',
-                  backgroundColor: theme?.backgroundColor || 'var(--color-background)'
+                  color: theme?.secondaryTextColor || 'var(--theme-secondary-text-color)',
+                  backgroundColor: theme?.backgroundColor || 'var(--theme-background-color)'
                 }}>
                 {currentStep} / {steps.length}
               </span>
@@ -158,7 +172,7 @@ export default function ReturnLayout({
                 <div 
                   style={{ 
                     width: `${(currentStep / steps.length) * 100}%`,
-                    backgroundColor: theme?.primaryColor || 'var(--color-primary)'
+                    backgroundColor: theme?.primaryColor || 'var(--theme-primary-color)'
                   }} 
                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500"
                 ></div>
@@ -166,7 +180,7 @@ export default function ReturnLayout({
               
               {/* Step indicators */}
               <div className="flex justify-between text-xs px-1 mt-1.5"
-                style={{ color: theme?.secondaryTextColor || 'var(--color-text-secondary)' }}>
+                style={{ color: theme?.secondaryTextColor || 'var(--theme-secondary-text-color)' }}>
                 {steps.map((step, index) => {
                   const stepNum = index + 1;
                   let status;
@@ -187,9 +201,9 @@ export default function ReturnLayout({
                       `}
                       style={
                         status === 'current' 
-                          ? { borderColor: theme?.primaryColor || 'var(--color-primary)', color: theme?.primaryColor || 'var(--color-primary)' }
+                          ? { borderColor: theme?.primaryColor || 'var(--theme-primary-color)', color: theme?.primaryColor || 'var(--theme-primary-color)' }
                           : status === 'complete'
-                            ? { backgroundColor: theme?.successColor || 'var(--color-success)' }
+                            ? { backgroundColor: theme?.successColor || 'var(--theme-success-color, #10b981)' }
                             : {}
                       }>
                         {status === 'complete' ? '✓' : stepNum}
@@ -199,7 +213,7 @@ export default function ReturnLayout({
                       `}
                       style={
                         status === 'current' 
-                          ? { color: theme?.primaryColor || 'var(--color-primary)' }
+                          ? { color: theme?.primaryColor || 'var(--theme-primary-color)' }
                           : {}
                       }>
                         {stepLabel}
@@ -215,23 +229,20 @@ export default function ReturnLayout({
         {/* Main content */}
         <motion.div 
             variants={childVariants}
-            className="rounded-md shadow-md overflow-hidden"
-            style={{ 
-              backgroundColor: theme?.cardBackground || 'var(--theme-card, #ffffff)', 
-              borderColor: theme?.borderColor || 'var(--color-border)' 
-            }}
+            className="rounded-md shadow-md overflow-hidden return-portal-card"
+            style={cardStyle}
           >
           {/* Back button if needed */}
           {showBackButton && onBackClick && (
-            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200"
+            <div className="px-4 py-2 border-b"
               style={{ 
-                backgroundColor: theme?.backgroundColor || 'var(--color-background)',
-                borderColor: theme?.borderColor || 'var(--color-border)'
+                backgroundColor: theme?.backgroundColor || 'var(--theme-background-color)',
+                borderColor: theme?.borderColor || 'var(--theme-border-color)'
               }}>
               <button 
                 onClick={onBackClick}
                 className="flex items-center text-xs hover:text-gray-900"
-                style={{ color: theme?.secondaryTextColor || 'var(--color-text-secondary)' }}
+                style={{ color: theme?.secondaryTextColor || 'var(--theme-secondary-text-color)' }}
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 

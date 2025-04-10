@@ -1,4 +1,4 @@
-// src/pages/return-review.js
+// src/pages/return-review.js - With proper translation and theme implementation
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { 
@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantSettings } from '@/lib/tenant/hooks';
+import { useLocale } from '@/lib/i18n';
+import Trans from '@/lib/i18n/Trans';
 import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import ProductCard from '@/components/return/ProductCard';
@@ -24,6 +26,7 @@ export default function ReturnReview() {
     completeReturn
   } = useReturnFlow();
   const { settings } = useTenantSettings();
+  const { t } = useLocale();
   
   // Default return options with fallback values
   const giftCardBonus = settings?.returnOptions?.giftCardBonus ?? 0.10; // 10% bonus
@@ -67,7 +70,7 @@ export default function ReturnReview() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     if (!termsAccepted) {
-      alert('Please accept the terms and conditions to continue');
+      alert(t('return.review.acceptTermsAlert', 'Please accept the terms and conditions to continue'));
       return;
     }
     
@@ -92,14 +95,16 @@ export default function ReturnReview() {
     return (
       <ReturnLayout 
         currentStep={5} 
-        title="Review Your Return"
+        title={t('return.review.title', 'Review Your Return')}
         showBackButton={true}
         onBackClick={handleBack}
       >
         <div className="p-6 text-center py-12">
           <div className="flex flex-col items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading return details...</p>
+            <p className="text-gray-500">
+              <Trans i18nKey="common.loading">Loading return details...</Trans>
+            </p>
           </div>
         </div>
       </ReturnLayout>
@@ -109,15 +114,19 @@ export default function ReturnReview() {
   return (
     <ReturnLayout 
       currentStep={5} 
-      title="Return Method"
+      title={t('return.review.chooseRefund', 'Return Method')}
       showBackButton={true}
       onBackClick={handleBack}
     >
-      <div className="p-6">
+      <div className="p-6 return-portal-container">
         <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Refund Method</h2>
-          <p className="text-gray-600 max-w-xl mx-auto">
-            We offer you two refund options. Select the method that works best for you.
+          <h2 className="text-2xl font-bold mb-2 return-portal-heading">
+            <Trans i18nKey="return.review.chooseRefund">Choose Your Refund Method</Trans>
+          </h2>
+          <p className="text-gray-600 max-w-xl mx-auto return-portal-text-secondary">
+            <Trans i18nKey="return.review.refundOptions">
+              We offer you two refund options. Select the method that works best for you.
+            </Trans>
           </p>
         </div>
 
@@ -133,38 +142,59 @@ export default function ReturnReview() {
                 : 'shadow-sm border-gray-200 hover:shadow-md hover:scale-105 hover:border-blue-300'}
             `}
             onClick={() => setSelectedOption('giftcard')}
+            style={{
+              borderColor: selectedOption === 'giftcard' 
+                ? 'var(--theme-primary-color, #4f46e5)' 
+                : 'var(--theme-border-color, #e5e7eb)',
+              boxShadow: selectedOption === 'giftcard' 
+                ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}
           >
             {/* Bonus Badge */}
             <div className="absolute top-0 right-0 m-2">
               <span className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center">
                 <Sparkles className="w-3 h-3 mr-1" />
-                +{(giftCardBonus * 100).toFixed(0)}% BONUS
+                <Trans i18nKey="return.review.bonusAmount" params={{percent: (giftCardBonus * 100).toFixed(0)}}>
+                  +{(giftCardBonus * 100).toFixed(0)}% BONUS
+                </Trans>
               </span>
             </div>
 
-            <div className="bg-blue-100 rounded-full p-3 mr-4 flex-shrink-0">
-              <Gift className="w-6 h-6 text-blue-600" />
+            <div className="bg-blue-100 rounded-full p-3 mr-4 flex-shrink-0" 
+                 style={{backgroundColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.1)'}}>
+              <Gift className="w-6 h-6 text-blue-600" style={{color: 'var(--theme-primary-color, #4f46e5)'}} />
             </div>
             
             <div className="flex-grow">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
-                Maximize Your Return
+              <h3 className="text-lg font-bold text-gray-900 mb-1 return-portal-heading">
+                <Trans i18nKey="return.review.maximizeReturn">Maximize Your Return</Trans>
               </h3>
               
-              <p className="text-gray-600 text-sm mb-2">
-                Enjoy an extra {(giftCardBonus * 100).toFixed(0)}% bonus – more money back in your pocket!
+              <p className="text-sm mb-2 return-portal-text-secondary">
+                <Trans i18nKey="return.review.bonusDescription" params={{percent: (giftCardBonus * 100).toFixed(0)}}>
+                  Enjoy an extra {(giftCardBonus * 100).toFixed(0)}% bonus – more money back in your pocket!
+                </Trans>
               </p>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2" 
+                   style={{
+                     backgroundColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.05)', 
+                     borderColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.2)'
+                   }}>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Original Value</span>
-                  <span className="text-gray-900 font-medium">
+                  <span className="return-portal-text-secondary">
+                    <Trans i18nKey="return.review.originalValue">Original Value</Trans>
+                  </span>
+                  <span className="font-medium return-portal-text">
                     ${totalReturnValue.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-1">
-                  <span className="text-blue-600 font-bold">Gift Card Value</span>
-                  <span className="text-blue-800 font-bold">
+                  <span className="font-bold" style={{color: 'var(--theme-primary-color, #4f46e5)'}}>
+                    <Trans i18nKey="return.review.giftCardValue">Gift Card Value</Trans>
+                  </span>
+                  <span className="font-bold" style={{color: 'var(--theme-primary-color, #4f46e5)'}}>
                     ${giftCardValue.toFixed(2)}
                   </span>
                 </div>
@@ -180,9 +210,13 @@ export default function ReturnReview() {
                 />
                 <label 
                   htmlFor="giftcard-option"
-                  className="block w-full py-2 rounded-lg text-center font-bold transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                  className="block w-full py-2 rounded-lg text-center font-bold transition-colors bg-blue-600 text-white hover:bg-blue-700 return-portal-button-primary"
+                  style={{
+                    backgroundColor: 'var(--theme-primary-color, #4f46e5)',
+                    color: '#ffffff'
+                  }}
                 >
-                  Select Gift Card
+                  <Trans i18nKey="return.review.selectGiftCard">Select Gift Card</Trans>
                 </label>
               </div>
             </div>
@@ -198,12 +232,22 @@ export default function ReturnReview() {
                 : 'shadow-sm border-gray-200 opacity-80 hover:shadow-md hover:scale-105 hover:opacity-100'}
             `}
             onClick={() => setSelectedOption('return')}
+            style={{
+              borderColor: selectedOption === 'return' 
+                ? 'var(--theme-secondary-color, #6b7280)' 
+                : 'var(--theme-border-color, #e5e7eb)',
+              boxShadow: selectedOption === 'return' 
+                ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}
           >
             {/* Shipping Deduction Badge */}
             <div className="absolute top-0 right-0 m-2">
               <span className="bg-gradient-to-r from-red-100 to-red-200 text-red-800 text-xs font-bold px-2 py-1 rounded-full flex items-center">
                 <DollarSign className="w-3 h-3 mr-1" />
-                -{(shippingDeductionRate * 100).toFixed(0)}kr Shipping
+                <Trans i18nKey="return.review.shippingDeduction" params={{percent: (shippingDeductionRate * 100).toFixed(0)}}>
+                  -{(shippingDeductionRate * 100).toFixed(0)}kr Shipping
+                </Trans>
               </span>
             </div>
 
@@ -212,22 +256,30 @@ export default function ReturnReview() {
             </div>
             
             <div className="flex-grow">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Original Payment</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-1 return-portal-heading">
+                <Trans i18nKey="return.review.originalPayment">Original Payment</Trans>
+              </h3>
               
-              <p className="text-gray-600 text-sm mb-2">
-                Refund to original method with shipping deduction
+              <p className="text-sm mb-2 return-portal-text-secondary">
+                <Trans i18nKey="return.returnOptions.returnDescription">
+                  Refund to original method with shipping deduction
+                </Trans>
               </p>
               
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Original Value</span>
-                  <span className="text-gray-900 font-medium">
+                  <span className="return-portal-text-secondary">
+                    <Trans i18nKey="return.review.originalValue">Original Value</Trans>
+                  </span>
+                  <span className="font-medium return-portal-text">
                     ${totalReturnValue.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-1">
-                  <span className="text-gray-700 font-bold">Refund Amount</span>
-                  <span className="text-gray-900 font-bold">
+                  <span className="font-bold return-portal-text">
+                    <Trans i18nKey="return.review.refundAmount">Refund Amount</Trans>
+                  </span>
+                  <span className="font-bold return-portal-text">
                     ${returnValueMinusShipping.toFixed(2)}
                   </span>
                 </div>
@@ -245,7 +297,7 @@ export default function ReturnReview() {
                   htmlFor="return-option"
                   className="block w-full py-2 rounded-lg text-center font-bold transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
                 >
-                  Select Original Method
+                  <Trans i18nKey="return.review.selectOriginalMethod">Select Original Method</Trans>
                 </label>
               </div>
             </div>
@@ -253,20 +305,27 @@ export default function ReturnReview() {
         </div>
 
         {/* Items to Process Section */}
-        <div className="bg-gray-50 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-            <Package className="w-5 h-5 mr-2 text-blue-600" />
-            Items in Your Return
+        <div className="bg-gray-50 rounded-lg p-6 mb-6" 
+             style={{backgroundColor: 'var(--theme-background-color, #f9fafb)'}}>
+          <h3 className="text-lg font-bold mb-4 flex items-center return-portal-heading">
+            <Package className="w-5 h-5 mr-2" style={{color: 'var(--theme-primary-color, #4f46e5)'}} />
+            <Trans i18nKey="return.review.itemsToProcess">Items in Your Return</Trans>
           </h3>
           
           {itemsToReturn.length === 0 ? (
             <div className="text-center py-8 bg-white rounded-lg">
-              <p className="text-gray-500">No items selected for return.</p>
+              <p className="text-gray-500 return-portal-text-secondary">
+                <Trans i18nKey="return.review.noItemsSelected">No items selected for return.</Trans>
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {itemsToReturn.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg border p-4">
+                <div key={item.id} className="bg-white rounded-lg border p-4" 
+                     style={{
+                       backgroundColor: 'var(--theme-card-background, #ffffff)',
+                       borderColor: 'var(--theme-border-color, #e5e7eb)'
+                     }}>
                   <ProductCard
                     product={item}
                     showQuantitySelector={false}
@@ -274,12 +333,14 @@ export default function ReturnReview() {
                     className="border-none p-0"
                   />
                   
-                  <div className="mt-2 pl-4 text-sm text-gray-600">
+                  <div className="mt-2 pl-4 text-sm return-portal-text-secondary">
                     <p>
-                      <span className="font-medium">Reason:</span> {item.returnReason?.reason || 'Not specified'}
+                      <span className="font-medium return-portal-text">
+                        <Trans i18nKey="return.returnReason.reasonLabel">Reason:</Trans>
+                      </span> {item.returnReason?.reason || t('return.returnReason.notSpecified', 'Not specified')}
                     </p>
                     {item.returnReason?.additionalInfo && (
-                      <p className="text-gray-500 italic">{item.returnReason.additionalInfo}</p>
+                      <p className="italic return-portal-text-secondary">{item.returnReason.additionalInfo}</p>
                     )}
                   </div>
                 </div>
@@ -289,25 +350,36 @@ export default function ReturnReview() {
         </div>
         
         {/* Return Policy Agreement Section */}
-        <div className="mb-6 p-6 bg-blue-50 rounded-2xl border border-blue-100">
+        <div className="mb-6 p-6 rounded-2xl border" 
+             style={{
+               backgroundColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.05)',
+               borderColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.2)'
+             }}>
           <div className="flex items-start">
             <div className="flex items-center h-5 mr-4">
               <input
                 id="terms"
                 type="checkbox"
-                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-5 w-5 border-gray-300 rounded focus:ring-blue-500"
+                style={{
+                  accentColor: 'var(--theme-primary-color, #4f46e5)',
+                  borderColor: 'var(--theme-border-color, #e5e7eb)'
+                }}
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
               />
             </div>
             <div>
-              <label htmlFor="terms" className="font-bold text-blue-900 block mb-2">
-                Return Policy Agreement
+              <label htmlFor="terms" className="font-bold block mb-2" 
+                     style={{color: 'var(--theme-primary-color, #4f46e5)'}}>
+                <Trans i18nKey="return.review.termsAccept">Return Policy Agreement</Trans>
               </label>
-              <p className="text-blue-700 text-sm">
-                By selecting a return method, I confirm that the items are in their original condition, 
-                unmodified, and meet the return policy requirements. I understand that the final refund 
-                may be subject to inspection.
+              <p className="text-sm" style={{color: 'var(--theme-primary-color, #4f46e5)'}}>
+                <Trans i18nKey="return.review.termsDescription">
+                  By selecting a return method, I confirm that the items are in their original condition, 
+                  unmodified, and meet the return policy requirements. I understand that the final refund 
+                  may be subject to inspection.
+                </Trans>
               </p>
             </div>
           </div>
@@ -321,10 +393,12 @@ export default function ReturnReview() {
             isLoading={loading || isSubmitting}
             variant="primary"
             size="lg"
-            className="w-full md:w-auto"
+            className="w-full md:w-auto return-portal-button-primary"
             icon={<CheckCircle className="w-5 h-5" />}
           >
-            {isSubmitting ? 'Processing...' : 'Complete Return'}
+            {isSubmitting ? 
+              t('return.review.processing', 'Processing...') : 
+              t('return.review.completeReturn', 'Complete Return')}
           </Button>
         </div>
       </div>

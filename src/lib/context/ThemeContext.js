@@ -1,3 +1,4 @@
+// src/lib/context/ThemeContext.js - FIXED
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getTenantTheme } from '../tenant/service';
 
@@ -23,7 +24,6 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
 
   // Helper to set CSS variables
   const setCssVar = useCallback((name, value) => {
-    console.log(`Setting CSS variable ${name} to ${value}`);
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty(name, value);
     }
@@ -68,10 +68,22 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     document.head.appendChild(link);
   }, []);
 
-  // Apply theme to DOM by setting CSS variables - wrap in useCallback
+  // Apply theme to DOM by setting CSS variables - FIXED
   const applyThemeToDom = useCallback((themeConfig) => {
     console.log('Applying theme to DOM:', themeConfig);
     if (!themeConfig || typeof document === 'undefined') return;
+    
+    // Apply to document element for global scope
+    document.documentElement.style.setProperty('--theme-primary-color', themeConfig.primaryColor || '#4f46e5');
+    document.documentElement.style.setProperty('--theme-secondary-color', themeConfig.secondaryColor || '#f59e0b');
+    document.documentElement.style.setProperty('--theme-accent-color', themeConfig.accentColor || '#10b981');
+    document.documentElement.style.setProperty('--theme-background-color', themeConfig.backgroundColor || '#ffffff');
+    document.documentElement.style.setProperty('--theme-text-color', themeConfig.textColor || '#171717');
+    document.documentElement.style.setProperty('--theme-secondary-text-color', themeConfig.secondaryTextColor || '#6b7280');
+    document.documentElement.style.setProperty('--theme-border-color', themeConfig.borderColor || '#e5e7eb');
+    document.documentElement.style.setProperty('--theme-font-family', themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
+    document.documentElement.style.setProperty('--theme-heading-font-family', themeConfig.headingFontFamily || themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
+    document.documentElement.style.setProperty('--theme-font-size', themeConfig.fontSize || '16px');
     
     // Primary color and shades
     setCssVar('--theme-primary-50', lightenColor(themeConfig.primaryColor, 0.9) || '#e6f2ff');
@@ -85,38 +97,14 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     setCssVar('--theme-primary-800', darkenColor(themeConfig.primaryColor, 0.6) || '#00335c');
     setCssVar('--theme-primary-900', darkenColor(themeConfig.primaryColor, 0.8) || '#001d33');
     
-    // Secondary color
-    setCssVar('--theme-secondary-500', themeConfig.secondaryColor || '#64748b');
-    setCssVar('--theme-secondary-200', lightenColor(themeConfig.secondaryColor, 0.6) || '#e2e8f0');
-    setCssVar('--theme-secondary-700', darkenColor(themeConfig.secondaryColor, 0.4) || '#334155');
+    // Also apply to body for component scoping
+    document.body.style.backgroundColor = themeConfig.backgroundColor || '#ffffff';
+    document.body.style.color = themeConfig.textColor || '#171717';
+    document.body.style.fontFamily = themeConfig.fontFamily || 'Inter, system-ui, sans-serif';
+    document.body.style.fontSize = themeConfig.fontSize || '16px';
     
-    // Other theme colors
-    setCssVar('--theme-accent-500', themeConfig.accentColor || '#10b981');
-    setCssVar('--theme-success-500', themeConfig.successColor || '#00b347');
-    setCssVar('--theme-warning-500', themeConfig.warningColor || '#f59e0b');
-    setCssVar('--theme-danger-500', themeConfig.dangerColor || '#e60000');
-    
-    // Base UI colors
-    setCssVar('--theme-background', '#ffffff');
-    setCssVar('--theme-surface', themeConfig.backgroundColor || '#ffffff');
-    setCssVar('--theme-card', themeConfig.backgroundColor || '#ffffff');
-    setCssVar('--theme-border', themeConfig.borderColor || '#e5e7eb');
-    
-    // Text colors
-    setCssVar('--theme-text', themeConfig.textColor || '#171717');
-    setCssVar('--theme-text-light', themeConfig.secondaryTextColor || '#6b7280');
-    setCssVar('--theme-text-inverse', '#ffffff');
-    
-    // Typography
-    setCssVar('--theme-font-family', themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
-    setCssVar('--theme-font-family-heading', themeConfig.headingFontFamily || themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
-    setCssVar('--theme-font-size-base', themeConfig.fontSize || '16px');
-    
-    // Legacy variables for compatibility
-    setCssVar('--background', themeConfig.backgroundColor || '#ffffff');
-    setCssVar('--foreground', themeConfig.textColor || '#171717');
-    setCssVar('--input-text', themeConfig.textColor || '#000000');
-    setCssVar('--input-placeholder', themeConfig.secondaryTextColor || '#6b7280');
+    // Add specific class to body for additional styling hook
+    document.body.classList.add('theme-applied');
     
     // Apply custom CSS if provided
     if (themeConfig.customCSS) {
@@ -128,38 +116,63 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       }
       styleElement.textContent = themeConfig.customCSS;
     }
+    
+    // Add specific scoped styles to ensure theming works in the return portal
+    const returnPortalStyles = `
+      .return-portal-container {
+        background-color: ${themeConfig.backgroundColor || '#ffffff'};
+        color: ${themeConfig.textColor || '#171717'};
+      }
+      .return-portal-card {
+        background-color: ${themeConfig.cardBackground || '#ffffff'};
+        border-color: ${themeConfig.borderColor || '#e5e7eb'};
+      }
+      .return-portal-heading {
+        color: ${themeConfig.primaryColor || '#4f46e5'};
+        font-family: ${themeConfig.headingFontFamily || themeConfig.fontFamily || 'Inter, system-ui, sans-serif'};
+      }
+      .return-portal-button-primary {
+        background-color: ${themeConfig.primaryColor || '#4f46e5'};
+        color: #ffffff;
+      }
+      .return-portal-button-secondary {
+        background-color: ${themeConfig.secondaryColor || '#f59e0b'};
+        color: #ffffff;
+      }
+      .return-portal-text {
+        color: ${themeConfig.textColor || '#171717'};
+      }
+      .return-portal-text-secondary {
+        color: ${themeConfig.secondaryTextColor || '#6b7280'};
+      }
+    `;
+    
+    let portalStyleElement = document.getElementById('return-portal-theme-styles');
+    if (!portalStyleElement) {
+      portalStyleElement = document.createElement('style');
+      portalStyleElement.id = 'return-portal-theme-styles';
+      document.head.appendChild(portalStyleElement);
+    }
+    portalStyleElement.textContent = returnPortalStyles;
+    
     console.log('Theme applied to DOM successfully');
   }, [setCssVar, lightenColor, darkenColor]);
 
   // Wrap loadTheme in useCallback so its reference remains stable
   const loadTheme = useCallback(async () => {
     try {
-      console.log('Loading theme - Start');
       setLoading(true);
       const themeConfig = await getTenantTheme(tenantId);
       
-      console.group('Theme Loading');
-      console.log('Tenant ID:', tenantId);
-      console.log('Loaded Theme Config:', themeConfig);
-      
       if (themeConfig) {
-        // Log each theme property
-        Object.entries(themeConfig).forEach(([key, value]) => {
-          console.log(`Theme Property - ${key}:`, value);
-        });
-
         setTheme(themeConfig);
         applyThemeToDom(themeConfig);
 
         // Load custom fonts if needed
         if (themeConfig.fontFamily) {
-          console.log('Loading font:', themeConfig.fontFamily);
           loadCustomFont(themeConfig.fontFamily);
         }
-      } else {
-        console.warn('No theme configuration found');
       }
-      console.groupEnd();
     } catch (error) {
       console.error('Error loading theme:', error);
     } finally {
@@ -169,7 +182,6 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
 
   // Load theme when component mounts or tenantId changes
   useEffect(() => {
-    console.log('ThemeProvider: Loading theme for tenant', tenantId);
     loadTheme();
   }, [tenantId, loadTheme]);
 
@@ -189,13 +201,15 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   
   // Check for saved color mode preference when component mounts
   useEffect(() => {
-    const savedMode =
-      localStorage.getItem('colorMode') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    
-    if (savedMode === 'dark') {
-      setMode('dark');
-      document.documentElement.classList.add('dark');
+    if (typeof window !== 'undefined') {
+      const savedMode =
+        localStorage.getItem('colorMode') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      
+      if (savedMode === 'dark') {
+        setMode('dark');
+        document.documentElement.classList.add('dark');
+      }
     }
   }, []);
 
@@ -203,8 +217,6 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
   const updateTheme = async (newThemeSettings) => {
     try {
       setLoading(true);
-      
-      console.log('Updating theme with:', newThemeSettings);
       
       const updatedTheme = {
         ...theme,

@@ -1,9 +1,11 @@
-// src/pages/order-details.js - With improved error handling
+// src/pages/order-details.js - With improved error handling and translations
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { ShoppingBag, AlertCircle, ArrowRight, Info, Phone, Mail } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantSettings } from '@/lib/tenant/hooks';
+import { useLocale } from '@/lib/i18n';
+import Trans from '@/lib/i18n/Trans';
 import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import ProductCard from '@/components/return/ProductCard';
@@ -23,6 +25,7 @@ export default function OrderDetails() {
   } = useReturnFlow();
   
   const { settings } = useTenantSettings();
+  const { t } = useLocale();
   const [localError, setLocalError] = useState('');
 
   // If no order, redirect back to start
@@ -49,7 +52,7 @@ export default function OrderDetails() {
   
       
     if (selectedItemIds.length === 0) {
-      setLocalError('Please select at least one item to continue');
+      setLocalError(t('return.orderDetails.noItemsSelected', 'Please select at least one item to continue'));
       return;
     }
     
@@ -75,7 +78,7 @@ export default function OrderDetails() {
   // Group ineligible items by reason
   const ineligibleReasons = {};
   ineligibleItems.forEach(item => {
-    const reason = item.ineligibleReason || 'Not eligible for return';
+    const reason = item.ineligibleReason || t('return.orderDetails.defaultIneligibleReason', 'Not eligible for return');
     if (!ineligibleReasons[reason]) {
       ineligibleReasons[reason] = [];
     }
@@ -102,14 +105,16 @@ export default function OrderDetails() {
     return (
       <ReturnLayout 
         currentStep={2} 
-        title="Select Items to Return"
+        title={t('return.orderDetails.title', 'Select Items to Return')}
         showBackButton={true}
         onBackClick={handleBack}
       >
         <div className="p-6 text-center py-12">
           <div className="flex flex-col items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading your order details...</p>
+            <p className="text-gray-500">
+              <Trans i18nKey="common.loading">Loading your order details...</Trans>
+            </p>
           </div>
         </div>
       </ReturnLayout>
@@ -119,18 +124,24 @@ export default function OrderDetails() {
   return (
     <ReturnLayout 
       currentStep={2} 
-      title="Select Items to Return"
+      title={t('return.orderDetails.title', 'Select Items to Return')}
       showBackButton={true}
       onBackClick={handleBack}
     >
-      <div className="p-6">
+      <div className="p-6 return-portal-container">
         {/* Order Summary */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
             <div>
-              <h2 className="text-xl font-medium text-gray-900">Order #{order.order_number || order.id}</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Placed on {new Date(order.created_at).toLocaleDateString()}
+              <h2 className="text-xl font-medium return-portal-heading">
+                <Trans i18nKey="return.orderDetails.orderNumber" params={{orderNumber: order.order_number || order.id}}>
+                  Order #{order.order_number || order.id}
+                </Trans>
+              </h2>
+              <p className="text-sm text-gray-500 mt-1 return-portal-text-secondary">
+                <Trans i18nKey="return.orderDetails.placedOn" params={{date: new Date(order.created_at).toLocaleDateString()}}>
+                  Placed on {new Date(order.created_at).toLocaleDateString()}
+                </Trans>
               </p>
             </div>
             
@@ -140,9 +151,10 @@ export default function OrderDetails() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 sm:mt-0 text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                style={{ color: 'var(--theme-primary-color, #4f46e5)' }}
               >
                 <Info className="w-4 h-4 mr-1" />
-                View Original Order
+                <Trans i18nKey="return.orderDetails.viewOriginal">View Original Order</Trans>
               </a>
             )}
           </div>
@@ -156,8 +168,10 @@ export default function OrderDetails() {
             className="mb-6"
           />
           
-          <p className="text-sm text-gray-700 mt-4">
-            Choose the items you&apos;d like to return or exchange. Only eligible items can be selected.
+          <p className="text-sm text-gray-700 mt-4 return-portal-text">
+            <Trans i18nKey="return.orderDetails.chooseItems">
+              Choose the items you'd like to return or exchange. Only eligible items can be selected.
+            </Trans>
           </p>
         </div>
         
@@ -176,16 +190,24 @@ export default function OrderDetails() {
           <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4">
             <div className="flex flex-col items-center text-center mb-4 py-3">
               <AlertCircle className="h-14 w-14 text-yellow-500 mb-3" />
-              <h3 className="text-xl font-medium text-yellow-800 mb-2">No Eligible Items</h3>
+              <h3 className="text-xl font-medium text-yellow-800 mb-2">
+                <Trans i18nKey="return.orderDetails.noEligibleItems">No Eligible Items</Trans>
+              </h3>
               <p className="text-yellow-700 max-w-md">
-                We couldn&apos;t find any eligible items for return in this order.
+                <Trans i18nKey="return.orderDetails.noEligibleItemsMessage">
+                  We couldn't find any eligible items for return in this order.
+                </Trans>
               </p>
             </div>
             
             {/* Ineligible items with reasons */}
             {ineligibleItems.length > 0 && (
               <div className="mt-4 bg-white rounded-lg p-4 border border-yellow-200">
-                <h4 className="font-medium text-gray-800 mb-3">Why items are not eligible:</h4>
+                <h4 className="font-medium text-gray-800 mb-3">
+                  <Trans i18nKey="return.orderDetails.ineligibleReasonsTitle">
+                    Why items are not eligible:
+                  </Trans>
+                </h4>
                 
                 {/* Group by reason for better organization */}
                 {Object.entries(ineligibleReasons).map(([reason, items]) => (
@@ -214,17 +236,21 @@ export default function OrderDetails() {
             <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
               <h4 className="font-medium text-blue-800 mb-2 flex items-center">
                 <Info className="w-4 h-4 mr-2" />
-                Need Help?
+                <Trans i18nKey="return.orderDetails.needHelp">Need Help?</Trans>
               </h4>
               <p className="text-sm text-blue-700 mb-3">
-                If you believe your items should be eligible for return or have questions about our return policy,
-                please contact our customer support team:
+                <Trans i18nKey="return.orderDetails.helpMessage">
+                  If you believe your items should be eligible for return or have questions about our return policy,
+                  please contact our customer support team:
+                </Trans>
               </p>
               <div className="flex flex-col space-y-2">
-                <a href="mailto:support@example.com" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                <a href="mailto:support@example.com" className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                   style={{ color: 'var(--theme-primary-color, #4f46e5)' }}>
                   <Mail className="w-4 h-4 mr-2" /> support@example.com
                 </a>
-                <a href="tel:+18001234567" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                <a href="tel:+18001234567" className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                   style={{ color: 'var(--theme-primary-color, #4f46e5)' }}>
                   <Phone className="w-4 h-4 mr-2" /> 1-800-123-4567
                 </a>
               </div>
@@ -235,8 +261,9 @@ export default function OrderDetails() {
                 variant="primary"
                 size="md"
                 onClick={handleBack}
+                className="return-portal-button-primary"
               >
-                Return to Home
+                <Trans i18nKey="return.success.returnHome">Return to Home</Trans>
               </Button>
             </div>
           </div>
@@ -274,14 +301,27 @@ export default function OrderDetails() {
       
       {/* Fixed bottom action bar - only show if there are eligible items */}
       {eligibleItems.length > 0 && (
-        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-b-lg z-10">
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-b-lg z-10"
+             style={{ 
+               backgroundColor: 'var(--theme-card-background, #ffffff)',
+               borderColor: 'var(--theme-border-color, #e5e7eb)'
+             }}>
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-700">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-700"
+                   style={{ 
+                     backgroundColor: 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.1)',
+                     color: 'var(--theme-primary-color, #4f46e5)' 
+                   }}>
                 <ShoppingBag className="w-4 h-4" />
               </div>
-              <span className="text-sm sm:text-base text-gray-700">
-                {totalItemsSelected} {totalItemsSelected === 1 ? 'item' : 'items'} selected
+              <span className="text-sm sm:text-base text-gray-700 return-portal-text">
+                <Trans 
+                  i18nKey="return.orderDetails.itemsSelected" 
+                  params={{count: totalItemsSelected}}
+                >
+                  {totalItemsSelected} {totalItemsSelected === 1 ? 'item' : 'items'} selected
+                </Trans>
               </span>
             </div>
             
@@ -292,8 +332,9 @@ export default function OrderDetails() {
               size="lg"
               icon={<ArrowRight className="w-5 h-5" />}
               iconPosition="right"
+              className="return-portal-button-primary"
             >
-              Continue
+              <Trans i18nKey="common.continue">Continue</Trans>
             </Button>
           </div>
         </div>

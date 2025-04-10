@@ -1,8 +1,10 @@
-// src/pages/index.js
+// src/pages/index.js - With proper translation implementation
 import { useState } from 'react';
 import { Box, Search, Mail, XCircle } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantTheme } from '@/lib/tenant/hooks';
+import { useLocale } from '@/lib/i18n';
+import Trans from '@/lib/i18n/Trans';
 import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import { motion } from 'framer-motion';
@@ -12,6 +14,7 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const { loading, error, lookupOrder } = useReturnFlow();
   const { theme } = useTenantTheme();
+  const { t } = useLocale();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,16 +42,20 @@ export default function Home() {
   };
 
   return (
-    <ReturnLayout currentStep={1} title="Start Your Return">
+    <ReturnLayout currentStep={1} title={t('return.title')}>
       <div className="px-6 py-8 md:py-10">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
               <Box style={{ color: theme?.primaryColor }} className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Start Your Return</h2>
-            <p className="mt-2 text-gray-600">
-              Enter your order details below to begin the return process
+            <h2 className="text-2xl font-bold text-gray-900 return-portal-heading">
+              <Trans i18nKey="return.intro.title">Start Your Return</Trans>
+            </h2>
+            <p className="mt-2 text-gray-600 return-portal-text-secondary">
+              <Trans i18nKey="return.intro.subtitle">
+                Enter your order details below to begin the return process
+              </Trans>
             </p>
           </div>
 
@@ -72,7 +79,7 @@ export default function Home() {
                 variants={formVariants}
               >
                 <label htmlFor="orderId" className="block text-sm font-medium text-gray-700 mb-2">
-                  Order ID
+                  <Trans i18nKey="return.orderDetails.orderIdLabel">Order ID</Trans>
                 </label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -84,7 +91,7 @@ export default function Home() {
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your order ID"
+                    placeholder={t('return.orderDetails.orderIdPlaceholder', 'Enter your order ID')}
                     disabled={loading}
                     required
                   />
@@ -98,7 +105,7 @@ export default function Home() {
                 variants={formVariants}
               >
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  <Trans i18nKey="return.orderDetails.emailLabel">Email Address</Trans>
                 </label>
                 <div className="relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -110,7 +117,7 @@ export default function Home() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your email address"
+                    placeholder={t('return.orderDetails.emailPlaceholder', 'Enter your email address')}
                     disabled={loading}
                     required
                   />
@@ -131,8 +138,9 @@ export default function Home() {
                   isLoading={loading}
                   icon={<Search className="w-4 h-4" />}
                   disabled={!orderId || !email || loading}
+                  className="return-portal-button-primary"
                 >
-                  {loading ? 'Looking Up Order...' : 'Look Up Order'}
+                  {loading ? t('return.intro.lookingUp', 'Looking Up Order...') : t('return.intro.lookupOrder', 'Look Up Order')}
                 </Button>
               </motion.div>
             </div>

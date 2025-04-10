@@ -1,9 +1,11 @@
-// src/pages/return-options/[id].js
+// src/pages/return-options/[id].js - With proper translation and theme implementation
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
 import { useReturnFlow } from '@/hooks/useReturnFlow';
 import { useTenantSettings } from '@/lib/tenant/hooks';
+import { useLocale } from '@/lib/i18n';
+import Trans from '@/lib/i18n/Trans';
 import ReturnLayout from '@/components/return/ReturnLayout';
 import Button from '@/components/ui/Button';
 import ProductCard from '@/components/return/ProductCard';
@@ -20,6 +22,7 @@ export default function ReturnOptions() {
     loading 
   } = useReturnFlow();
   const { settings } = useTenantSettings();
+  const { t } = useLocale();
   
   const [selectedOption, setSelectedOption] = useState('');
   const [exchangeDetails, setExchangeDetails] = useState(null);
@@ -52,13 +55,13 @@ export default function ReturnOptions() {
     // For exchange, add an additional check to prevent selecting the current size
     if (selectedOption === 'exchange') {
       if (!exchangeDetails) {
-        alert('Please select exchange options');
+        alert(t('return.returnOptions.selectExchangeOptions', 'Please select exchange options'));
         return;
       }
       
       // Prevent continuing if no actual change was made
       if (exchangeDetails.originalSize === exchangeDetails.newSize) {
-        alert('Please select a different size for exchange');
+        alert(t('return.returnOptions.differentSizeRequired', 'Please select a different size for exchange'));
         return;
       }
     }
@@ -93,14 +96,17 @@ export default function ReturnOptions() {
     return (
       <ReturnLayout 
         currentStep={4} 
-        title="Return Options"
+        title={t('return.returnOptions.title', 'Return Options')}
         showBackButton={true}
         onBackClick={handleBack}
       >
         <div className="p-6 text-center py-12">
           <div className="flex flex-col items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading item details...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"
+                 style={{ borderColor: 'var(--theme-primary-color, #4f46e5)' }}></div>
+            <p className="text-gray-500 return-portal-text-secondary">
+              <Trans i18nKey="common.loading">Loading item details...</Trans>
+            </p>
           </div>
         </div>
       </ReturnLayout>
@@ -110,20 +116,28 @@ export default function ReturnOptions() {
   return (
     <ReturnLayout 
       currentStep={4} 
-      title="Return Options"
+      title={t('return.returnOptions.title', 'Return Options')}
       showBackButton={true}
       onBackClick={handleBack}
     >
-      <div className="p-6">
+      <div className="p-6 return-portal-container">
         <div className="mb-6">
-          <h2 className="text-xl font-medium text-gray-900">Choose Return or Exchange</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Would you prefer a refund or an exchange for this item?
+          <h2 className="text-xl font-medium return-portal-heading">
+            <Trans i18nKey="return.returnOptions.subtitle">Choose Return or Exchange</Trans>
+          </h2>
+          <p className="text-sm mt-1 return-portal-text-secondary">
+            <Trans i18nKey="return.returnOptions.chooseOption">
+              Would you prefer a refund or an exchange for this item?
+            </Trans>
           </p>
         </div>
         
         {/* Product preview */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="mb-6 p-4 rounded-lg border"
+             style={{
+               backgroundColor: 'var(--theme-background-color, #f9fafb)',
+               borderColor: 'var(--theme-border-color, #e5e7eb)'
+             }}>
           <ProductCard
             product={currentItem}
             showQuantitySelector={false}
@@ -137,7 +151,9 @@ export default function ReturnOptions() {
           animate="visible"
           className="space-y-4 mb-6"
         >
-          <h3 className="font-medium text-gray-900">Select an option:</h3>
+          <h3 className="font-medium return-portal-heading">
+            <Trans i18nKey="return.returnOptions.selectOption">Select an option:</Trans>
+          </h3>
           
           <div className="grid gap-3">
             {/* Return option */}
@@ -149,6 +165,17 @@ export default function ReturnOptions() {
                     ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                     : 'border-gray-200 hover:border-gray-300'}
                 `}
+                style={{
+                  borderColor: selectedOption === 'return' 
+                    ? 'var(--theme-primary-color, #4f46e5)' 
+                    : 'var(--theme-border-color, #e5e7eb)',
+                  backgroundColor: selectedOption === 'return' 
+                    ? 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.05)' 
+                    : 'var(--theme-card-background, #ffffff)',
+                  boxShadow: selectedOption === 'return' 
+                    ? `0 0 0 2px rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.2)` 
+                    : 'none'
+                }}
               >
                 <div className="flex items-center">
                   <input
@@ -157,11 +184,21 @@ export default function ReturnOptions() {
                     value="return"
                     checked={selectedOption === 'return'}
                     onChange={() => setSelectedOption('return')}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 focus:ring-blue-500"
+                    style={{
+                      accentColor: 'var(--theme-primary-color, #4f46e5)',
+                      borderColor: 'var(--theme-border-color, #e5e7eb)'
+                    }}
                   />
                   <div className="ml-3">
-                    <span className="text-gray-900 font-medium block">Return for refund</span>
-                    <span className="text-gray-500 text-sm">Refund will be processed to your original payment method</span>
+                    <span className="font-medium block return-portal-text">
+                      <Trans i18nKey="return.returnOptions.returnOption">Return for refund</Trans>
+                    </span>
+                    <span className="text-sm return-portal-text-secondary">
+                      <Trans i18nKey="return.returnOptions.returnDescription">
+                        Refund will be processed to your original payment method
+                      </Trans>
+                    </span>
                   </div>
                 </div>
               </label>
@@ -177,6 +214,17 @@ export default function ReturnOptions() {
                       ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                       : 'border-gray-200 hover:border-gray-300'}
                   `}
+                  style={{
+                    borderColor: selectedOption === 'exchange' 
+                      ? 'var(--theme-primary-color, #4f46e5)' 
+                      : 'var(--theme-border-color, #e5e7eb)',
+                    backgroundColor: selectedOption === 'exchange' 
+                      ? 'rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.05)' 
+                      : 'var(--theme-card-background, #ffffff)',
+                    boxShadow: selectedOption === 'exchange' 
+                      ? `0 0 0 2px rgba(var(--theme-primary-color-rgb, 79, 70, 229), 0.2)` 
+                      : 'none'
+                  }}
                 >
                   <div className="flex items-center">
                     <input
@@ -185,12 +233,24 @@ export default function ReturnOptions() {
                       value="exchange"
                       checked={selectedOption === 'exchange'}
                       onChange={() => setSelectedOption('exchange')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 focus:ring-blue-500"
+                      style={{
+                        accentColor: 'var(--theme-primary-color, #4f46e5)',
+                        borderColor: 'var(--theme-border-color, #e5e7eb)'
+                      }}
                     />
                     <div className="ml-3">
-                      <span className="text-gray-900 font-medium block">Exchange for another size/color</span>
-                      <span className="text-gray-500 text-sm">We&apos;ll ship a replacement product to you</span>
-                      </div>
+                      <span className="font-medium block return-portal-text">
+                        <Trans i18nKey="return.returnOptions.exchangeOption">
+                          Exchange for another size/color
+                        </Trans>
+                      </span>
+                      <span className="text-sm return-portal-text-secondary">
+                        <Trans i18nKey="return.returnOptions.exchangeDescription">
+                          We'll ship a replacement product to you
+                        </Trans>
+                      </span>
+                    </div>
                   </div>
                 </label>
               </motion.div>
@@ -222,8 +282,9 @@ export default function ReturnOptions() {
             size="lg"
             icon={<ArrowRight className="w-5 h-5" />}
             iconPosition="right"
+            className="return-portal-button-primary"
           >
-            Continue
+            <Trans i18nKey="common.continue">Continue</Trans>
           </Button>
         </div>
       </div>

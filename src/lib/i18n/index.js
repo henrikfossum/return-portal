@@ -1,7 +1,7 @@
-// src/lib/i18n/index.js
-import { createContext, useContext, useState, useEffect } from 'react';
+// Enhanced version of src/lib/i18n/index.js
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-// Import only the translation files we've created
+// Import all translation files
 import en from './locales/en';
 import no from './locales/no';
 
@@ -26,37 +26,34 @@ export function useLocale() {
 export function LocaleProvider({ children, tenantId = 'default' }) {
   const [locale, setLocale] = useState('en');
   const [messages, setMessages] = useState(translations.en);
+  const [supportedLocales, setSupportedLocales] = useState(['en', 'no']);
   
   // Initialize locale based on tenant settings and/or browser language
   useEffect(() => {
     async function initLocale() {
       try {
-        // Fetch tenant settings
-        const response = await fetch(`/api/tenant/settings?tenantId=${tenantId}`);
-        const settings = await response.json();
+        // Try to get saved preference first
+        const savedLocale = localStorage.getItem('preferredLocale');
+        let detectedLocale = savedLocale || 'en';
         
-        let detectedLocale = 'en'; // Default to English
-        
-        // If browser language detection is enabled, check browser language
-        if (settings.locale?.detectBrowserLanguage) {
-          const browserLang = navigator.language.split('-')[0];
-          
-          // Check if browser language is supported
-          if (settings.locale.supportedLanguages.includes(browserLang) && 
-              translations[browserLang]) {
-            detectedLocale = browserLang;
+        // If no saved preference, try to detect from browser if available
+        if (!savedLocale) {
+          try {
+            // Simple approach: Get first part of navigator language
+            const browserLang = navigator.language.split('-')[0];
+            
+            // Check if browser language is supported
+            if (translations[browserLang]) {
+              detectedLocale = browserLang;
+            }
+          } catch (e) {
+            console.warn('Error detecting browser language:', e);
           }
         }
         
-        // Use the tenant's default language if no detection or not supported
-        const finalLocale = detectedLocale || settings.locale?.defaultLanguage || 'en';
-        
-        // Ensure the locale exists in our translations
-        const safeLocale = translations[finalLocale] ? finalLocale : 'en';
-        
         // Set the locale and messages
-        setLocale(safeLocale);
-        setMessages(translations[safeLocale]);
+        changeLocale(detectedLocale);
+        
       } catch (error) {
         console.error('Error initializing locale:', error);
         
@@ -70,20 +67,51 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
   }, [tenantId]);
   
   // Function to change language
-  const changeLocale = (newLocale) => {
+  const changeLocale = useCallback((newLocale) => {
     if (translations[newLocale]) {
+      console.log(`Changing locale to ${newLocale}`);
       setLocale(newLocale);
       setMessages(translations[newLocale]);
-      // Optionally save preference in localStorage
+      // Save preference in localStorage
       localStorage.setItem('preferredLocale', newLocale);
+      
+      // Force a re-render of the whole app
+      document.documentElement.lang = newLocale;
+      
+      // Also update any date/number formatting
+      try {
+        document.documentElement.setAttribute('data-locale', newLocale);
+      } catch (e) {
+        console.warn('Error setting locale attribute:', e);
+      }
     } else {
       console.error(`Locale ${newLocale} is not supported`);
     }
-  };
+  }, []);
   
-  // Translation function
-  const t = (key, params = {}) => {
-    let message = key.split('.').reduce((obj, k) => (obj && obj[k]) || null, messages) || key;
+  // Translation function with enhanced fallback and debugging
+  const t = useCallback((key, params = {}) => {
+    // Split the key by dots to navigate the messages object
+    const parts = key.split('.');
+    let message = parts.reduce((obj, k) => (obj && obj[k]) !== undefined ? obj[k] : null, messages);
+    
+    // If message not found, try to find in English as fallback
+    if (message === null && locale !== 'en') {
+      message = parts.reduce((obj, k) => (obj && obj[k]) !== undefined ? obj[k] : null, translations.en);
+      
+      // Log missing translation for debugging
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`Missing translation for key "${key}" in locale "${locale}"`);
+      }
+    }
+    
+    // If still no translation found, return the key itself
+    if (message === null) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`Translation key not found: "${key}" (in any locale)`);
+      }
+      return key;
+    }
     
     // Replace params in the message
     if (typeof message === 'string') {
@@ -93,50 +121,40 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
     }
     
     return message;
-  };
-  
-  return (
-    <LocaleContext.Provider
-      value={{
-        locale,
-        changeLocale,
-        t,
-        supportedLocales: Object.keys(translations)
-      }}
-    >
-      {children}
-    </LocaleContext.Provider>
-  );
-}
+  }, [messages, locale]);
 
-// Helper function to format dates according to locale
-export function formatDate(date, locale = 'en', options = {}) {
-  return new Date(date).toLocaleDateString(locale, options);
-}
+  // Format date according to locale
+  const formatDate = useCallback((date, options = {}) => {
+    return new Date(date).toLocaleDateString(locale, options);
+  }, [locale]);
 
-// Helper function to format numbers according to locale
-export function useNumberFormatter() {
-  const locale = useLocale();
-  
+  // Format number according to locale
   const formatNumber = useCallback((number, options = {}) => {
-    // Implementation
     return new Intl.NumberFormat(locale, options).format(number);
   }, [locale]);
-  
-  return formatNumber;
-}
 
-export function useCurrencyFormatter() {
-  const locale = useLocale();
-  
+  // Format currency according to locale
   const formatCurrency = useCallback((amount, options = {}) => {
-    // Implementation
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: 'USD',
       ...options
     }).format(amount);
   }, [locale]);
-  
-  return formatCurrency;
+
+  return (
+    <LocaleContext.Provider
+      value={{
+        locale,
+        supportedLocales: Object.keys(translations),
+        changeLocale,
+        t,
+        formatDate,
+        formatNumber,
+        formatCurrency
+      }}
+    >
+      {children}
+    </LocaleContext.Provider>
+  );
 }

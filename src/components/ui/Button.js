@@ -1,4 +1,4 @@
-// src/components/ui/Button.js
+// src/components/ui/Button.js - Updated with better theme variable usage
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -27,6 +27,36 @@ export default function Button({
   const { theme } = useTheme();
   const isDisabled = isLoading || disabled;
   
+  // Helper function to darken/lighten colors
+  const adjustColor = (color, amount) => {
+    if (!color || !color.startsWith('#')) return color;
+    
+    const getColorValue = (hex, start, end) => parseInt(hex.slice(start, end), 16);
+    
+    // Extract RGB components
+    const r = getColorValue(color, 1, 3);
+    const g = getColorValue(color, 3, 5);
+    const b = getColorValue(color, 5, 7);
+    
+    // Adjust the color (positive amount = lighten, negative = darken)
+    const adjust = (value) => {
+      if (amount >= 0) {
+        // Lighten
+        return Math.min(255, Math.floor(value + (255 - value) * amount));
+      } else {
+        // Darken
+        return Math.max(0, Math.floor(value * (1 + amount)));
+      }
+    };
+    
+    const newR = adjust(r);
+    const newG = adjust(g);
+    const newB = adjust(b);
+    
+    // Convert back to hex
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  };
+
   // Get the appropriate styles based on variant and theme
   const getStyles = () => {
     // Base styles that apply to all variants
@@ -36,75 +66,81 @@ export default function Button({
       transition: 'all 0.2s',
     };
     
+    // Use CSS variables as fallbacks for direct theme properties
+    const primaryColor = theme?.primaryColor || 'var(--theme-primary-color, #4f46e5)';
+    const secondaryColor = theme?.secondaryColor || 'var(--theme-secondary-color, #f59e0b)';
+    const successColor = theme?.successColor || 'var(--theme-success-color, #10b981)';
+    const dangerColor = theme?.dangerColor || 'var(--theme-danger-color, #ef4444)';
+    const textColor = theme?.textColor || 'var(--theme-text-color, #171717)';
+    
     // Variant-specific styles
     switch (variant) {
       case 'primary':
         return {
           ...baseStyles,
-          backgroundColor: theme?.primaryColor || 'var(--color-primary, #4f46e5)',
+          backgroundColor: primaryColor,
           color: '#ffffff',
           border: 'none',
-          ':hover': {
-            backgroundColor: theme?.primaryColor ? adjustColor(theme.primaryColor, -15) : 'var(--color-primary-dark, #3c35b5)',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          ':hover': !isDisabled ? {
+            backgroundColor: adjustColor(primaryColor, -0.15),
             opacity: 0.9,
-          },
+          } : {},
         };
       case 'secondary':
         return {
           ...baseStyles,
-          backgroundColor: theme?.secondaryColor || 'var(--color-secondary, #f59e0b)',
+          backgroundColor: secondaryColor,
           color: '#ffffff',
           border: 'none',
-          ':hover': {
-            backgroundColor: theme?.secondaryColor ? adjustColor(theme.secondaryColor, -15) : 'var(--color-secondary-dark, #d97706)',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          ':hover': !isDisabled ? {
+            backgroundColor: adjustColor(secondaryColor, -0.15),
             opacity: 0.9,
-          },
+          } : {},
         };
       case 'success':
         return {
           ...baseStyles,
-          backgroundColor: theme?.successColor || 'var(--color-success, #10b981)',
+          backgroundColor: successColor,
           color: '#ffffff',
           border: 'none',
-          ':hover': {
-            backgroundColor: theme?.successColor ? adjustColor(theme.successColor, -15) : 'var(--color-success-dark, #059669)',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          ':hover': !isDisabled ? {
+            backgroundColor: adjustColor(successColor, -0.15),
             opacity: 0.9,
-          },
+          } : {},
         };
       case 'danger':
         return {
           ...baseStyles,
-          backgroundColor: theme?.dangerColor || 'var(--color-danger, #ef4444)',
+          backgroundColor: dangerColor,
           color: '#ffffff',
           border: 'none',
-          ':hover': {
-            backgroundColor: theme?.dangerColor ? adjustColor(theme.dangerColor, -15) : 'var(--color-danger-dark, #dc2626)',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          ':hover': !isDisabled ? {
+            backgroundColor: adjustColor(dangerColor, -0.15),
             opacity: 0.9,
-          },
+          } : {},
         };
       case 'outline':
         return {
           ...baseStyles,
           backgroundColor: 'transparent',
-          color: theme?.primaryColor || 'var(--color-primary, #4f46e5)',
-          border: `1px solid ${theme?.primaryColor || 'var(--color-primary, #4f46e5)'}`,
-          ':hover': {
+          color: primaryColor,
+          border: `1px solid ${primaryColor}`,
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          ':hover': !isDisabled ? {
             backgroundColor: 'rgba(79, 70, 229, 0.05)',
-          },
+          } : {},
         };
       default:
         return baseStyles;
     }
   };
 
-  // Helper function to darken/lighten colors
-  const adjustColor = (color) => {
-    // Simple implementation; in a real app you would use a proper color library
-    return color; // For now, just return the original color
-  };
-
   const ButtonComponent = animate ? motion.button : 'button';
-  const animationProps = animate
+  const animationProps = animate && !isDisabled
     ? {
         whileHover: { scale: 1.02 },
         whileTap: { scale: 0.98 },
@@ -112,6 +148,9 @@ export default function Button({
     : {};
 
   const buttonStyles = getStyles();
+  
+  // Add a class that can be targeted by the custom theme styles
+  const themeClass = `return-portal-button-${variant}`;
   
   return (
     <ButtonComponent
@@ -121,6 +160,7 @@ export default function Button({
       className={`
         ${sizes[size]}
         ${fullWidth ? 'w-full' : ''}
+        ${themeClass}
         rounded-lg font-medium transition-colors
         flex items-center justify-center
         ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}

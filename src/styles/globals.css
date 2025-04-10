@@ -13,6 +13,19 @@
   --input-text: #000000;
   --input-placeholder: #6b7280;
   
+  /* Theme Variables with direct references */
+  --theme-primary-color: #4f46e5;
+  --theme-secondary-color: #f59e0b;
+  --theme-accent-color: #10b981;
+  --theme-background-color: #ffffff;
+  --theme-text-color: #171717;
+  --theme-secondary-text-color: #6b7280;
+  --theme-border-color: #e5e7eb;
+  --theme-card-background: #ffffff;
+  --theme-success-color: #10b981;
+  --theme-danger-color: #ef4444;
+  --theme-warning-color: #f59e0b;
+  
   /* Theme Colors */
   --theme-primary-50: #e6f2ff;
   --theme-primary-100: #b3daff;
@@ -100,6 +113,18 @@
   --input-placeholder: #a0a0a0;
   
   /* Theme Colors - Dark Mode */
+  --theme-primary-color: #3b82f6;
+  --theme-secondary-color: #94a3b8;
+  --theme-accent-color: #8b5cf6;
+  --theme-background-color: #0a0a0a;
+  --theme-text-color: #f0f0f0;
+  --theme-secondary-text-color: #a0a0a0;
+  --theme-border-color: #333333;
+  --theme-card-background: #1a1a1a;
+  --theme-success-color: #10b981;
+  --theme-danger-color: #ef4444;
+  --theme-warning-color: #f59e0b;
+  
   --theme-primary-500: #3b82f6;
   --theme-secondary-500: #94a3b8;
   --theme-success-500: #10b981;
@@ -121,10 +146,14 @@
 
 /* Base styles */
 body {
-  color: var(--theme-text);
-  background: var(--theme-background);
+  color: var(--theme-text-color, var(--theme-text));
   font-family: var(--theme-font-family), var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: var(--theme-font-size-base);
+}
+
+/* Fix for theme background only applying to the module, not the entire page */
+body {
+  background-color: initial;
 }
 
 /* Typography */
@@ -136,14 +165,14 @@ h1, h2, h3, h4, h5, h6 {
 input, 
 textarea, 
 select {
-  color: var(--theme-text) !important;
-  border-color: var(--theme-border);
+  color: var(--theme-text-color, var(--theme-text)) !important;
+  border-color: var(--theme-border-color, var(--theme-border));
 }
 
 input::placeholder, 
 textarea::placeholder, 
 select::placeholder {
-  color: var(--theme-text-light) !important;
+  color: var(--theme-secondary-text-color, var(--theme-text-light)) !important;
 }
 
 /* Dark mode form elements */
@@ -151,42 +180,86 @@ select::placeholder {
 .dark textarea, 
 .dark select {
   background-color: var(--theme-surface);
-  border-color: var(--theme-border);
+  border-color: var(--theme-border-color, var(--theme-border));
 }
 
 /* Common UI element styles */
 .card {
-  background-color: var(--theme-card);
-  border-color: var(--theme-border);
+  background-color: var(--theme-card-background, var(--theme-card));
+  border-color: var(--theme-border-color, var(--theme-border));
   border-radius: var(--theme-border-radius);
 }
 
 .btn-primary {
-  background-color: var(--theme-primary-500);
+  background-color: var(--theme-primary-color, var(--theme-primary-500));
   color: var(--theme-text-inverse);
 }
 
 .btn-secondary {
-  background-color: var(--theme-secondary-500);
+  background-color: var(--theme-secondary-color, var(--theme-secondary-500));
   color: var(--theme-text-inverse);
 }
 
 .btn-success {
-  background-color: var(--theme-success-500);
+  background-color: var(--theme-success-color, var(--theme-success-500));
   color: var(--theme-text-inverse);
 }
 
 .btn-danger {
-  background-color: var(--theme-danger-500);
+  background-color: var(--theme-danger-color, var(--theme-danger-500));
   color: var(--theme-text-inverse);
 }
 
 .btn-warning {
-  background-color: var(--theme-warning-500);
+  background-color: var(--theme-warning-color, var(--theme-warning-500));
   color: var(--theme-text-inverse);
 }
 
 /* Themed border utility */
 .border-theme {
-  border-color: var(--theme-border);
+  border-color: var(--theme-border-color, var(--theme-border));
+}
+
+/* Theme-specific classes for return portal */
+.return-portal-container {
+  background-color: var(--theme-background-color, #ffffff);
+  color: var(--theme-text-color, #171717);
+}
+
+.return-portal-card {
+  background-color: var(--theme-card-background, #ffffff);
+  border-color: var(--theme-border-color, #e5e7eb);
+}
+
+.return-portal-heading {
+  color: var(--theme-primary-color, #4f46e5);
+  font-family: var(--theme-heading-font-family, var(--font-family-heading));
+}
+
+.return-portal-button-primary {
+  background-color: var(--theme-primary-color, #4f46e5);
+  color: #ffffff;
+}
+
+.return-portal-button-secondary {
+  background-color: var(--theme-secondary-color, #f59e0b);
+  color: #ffffff;
+}
+
+.return-portal-text {
+  color: var(--theme-text-color, #171717);
+}
+
+.return-portal-text-secondary {
+  color: var(--theme-secondary-text-color, #6b7280);
+}
+
+/* Scoped theming for the return portal module */
+.theme-applied .return-portal-container {
+  background-color: var(--theme-background-color);
+  color: var(--theme-text-color);
+}
+
+.return-portal-module {
+  background-color: var(--theme-background-color, #ffffff);
 }

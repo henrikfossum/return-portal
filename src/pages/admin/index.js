@@ -1,151 +1,184 @@
-// src/pages/index.js - With proper translation implementation
-import { useState } from 'react';
-import { Box, Search, Mail, XCircle } from 'lucide-react';
-import { useReturnFlow } from '@/hooks/useReturnFlow';
-import { useTenantTheme } from '@/lib/tenant/hooks';
-import { useLocale } from '@/lib/i18n';
-import Trans from '@/lib/i18n/Trans';
-import ReturnLayout from '@/components/return/ReturnLayout';
+// src/pages/admin/index.js
+import React from 'react';
+import { Package, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
+import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { motion } from 'framer-motion';
+import Link from 'next/link';
+import AdminLayout from '@/components/admin/Layout';
+import { useAdminReturns } from '@/hooks/useAdminReturns';
 
-export default function Home() {
-  const [orderId, setOrderId] = useState('');
-  const [email, setEmail] = useState('');
-  const { loading, error, lookupOrder } = useReturnFlow();
-  const { theme } = useTenantTheme();
-  const { t } = useLocale();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      await lookupOrder(orderId, email);
-    } catch (err) {
-      // Error is already handled in the hook
-      console.error('Error looking up order:', err);
-    }
-  };
-
-  // Animation variants for form elements
-  const formVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i) => ({ 
-      opacity: 1, 
-      y: 0, 
-      transition: { 
-        delay: i * 0.1,
-        duration: 0.4,
-        ease: "easeOut" 
-      } 
-    })
-  };
+export default function AdminDashboard() {
+  const { returns, stats, loading, error } = useAdminReturns();
+  
+  // Take only the most recent 5 returns
+  const recentReturns = returns.slice(0, 5);
 
   return (
-    <ReturnLayout currentStep={1} title={t('return.title')}>
-      <div className="px-6 py-8 md:py-10">
-        <div className="max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
-              <Box style={{ color: theme?.primaryColor }} className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              <Trans i18nKey="return.intro.title">Start Your Return</Trans>
-            </h2>
-            <p className="mt-2 text-gray-600">
-              <Trans i18nKey="return.intro.subtitle">
-                Enter your order details below to begin the return process
-              </Trans>
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center p-4 mb-6 bg-red-50 border border-red-200 rounded-lg"
-              >
-                <XCircle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
-                <p className="text-sm text-red-700 flex-grow">{error}</p>
-              </motion.div>
-            )}
-
-            <div className="space-y-6">
-              <motion.div 
-                custom={0}
-                initial="hidden"
-                animate="visible"
-                variants={formVariants}
-              >
-                <label htmlFor="orderId" className="block text-sm font-medium text-gray-700 mb-2">
-                  <Trans i18nKey="return.orderDetails.orderIdLabel">Order ID</Trans>
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Box className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="orderId"
-                    value={orderId}
-                    onChange={(e) => setOrderId(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={t('return.orderDetails.orderIdPlaceholder', 'Enter your order ID')}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                custom={1}
-                initial="hidden"
-                animate="visible"
-                variants={formVariants}
-              >
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  <Trans i18nKey="return.orderDetails.emailLabel">Email Address</Trans>
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={t('return.orderDetails.emailPlaceholder', 'Enter your email address')}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                custom={2}
-                initial="hidden"
-                animate="visible"
-                variants={formVariants}
-              >
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  isLoading={loading}
-                  icon={<Search className="w-4 h-4" />}
-                  disabled={!orderId || !email || loading}
-                >
-                  {loading ? t('return.intro.lookingUp', 'Looking Up Order...') : t('return.intro.lookupOrder', 'Look Up Order')}
-                </Button>
-              </motion.div>
-            </div>
-          </form>
-        </div>
+    <AdminLayout title="Dashboard">
+      <div className="mb-6">
+        <h2 className="text-lg font-medium text-gray-900">Dashboard Overview</h2>
+        <p className="text-sm text-gray-500">Manage and monitor all return requests.</p>
       </div>
-    </ReturnLayout>
+      
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card padding="normal">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center">
+              <Package className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Total Returns</h3>
+              <span className="text-2xl font-semibold text-gray-900">
+                {loading ? '-' : stats.totalReturns}
+              </span>
+            </div>
+          </div>
+        </Card>
+        
+        <Card padding="normal">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 h-10 w-10 rounded-md bg-amber-100 flex items-center justify-center">
+              <Package className="h-6 w-6 text-amber-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Pending</h3>
+              <span className="text-2xl font-semibold text-gray-900">
+                {loading ? '-' : stats.pendingReturns}
+              </span>
+            </div>
+          </div>
+        </Card>
+        
+        <Card padding="normal">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 h-10 w-10 rounded-md bg-green-100 flex items-center justify-center">
+              <RefreshCw className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Completed</h3>
+              <span className="text-2xl font-semibold text-gray-900">
+                {loading ? '-' : stats.completedReturns}
+              </span>
+            </div>
+          </div>
+        </Card>
+        
+        <Card padding="normal">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 h-10 w-10 rounded-md bg-red-100 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Flagged</h3>
+              <span className="text-2xl font-semibold text-gray-900">
+                {loading ? '-' : stats.flaggedReturns}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
+      
+      {/* Recent Returns Table */}
+      <Card title="Recent Returns" padding="normal">
+        {loading ? (
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentReturns.length > 0 ? (
+                  recentReturns.map((ret) => (
+                    <tr key={ret.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {ret.id}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {ret.order_id}
+                      </td>
+                      {/* *** CUSTOMER COLUMN - MAKE THIS CHANGE *** */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {typeof ret.customer === 'object' && ret.customer !== null ? 
+                          ret.customer.name : 
+                          (ret.customer || 'Unknown Customer')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {ret.createdAt ? new Date(ret.createdAt).toLocaleDateString() : 
+                        (ret.date ? new Date(ret.date).toLocaleDateString() : 'N/A')}
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium
+                          ${ret.status === 'pending' ? 'bg-amber-100 text-amber-800' : ''}
+                          ${ret.status === 'approved' ? 'bg-blue-100 text-blue-800' : ''}
+                          ${ret.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                          ${ret.status === 'flagged' ? 'bg-purple-100 text-purple-800' : ''}
+                        `}>
+                          {ret.status.charAt(0).toUpperCase() + ret.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <Link href={`/admin/returns/${ret.id}`}>
+                          <Button variant="outline" size="xs">View</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                      No returns found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        <div className="mt-4">
+          <Link href="/admin/returns">
+            <Button 
+              variant="outline" 
+              size="sm"
+              icon={<ArrowRight className="w-4 h-4" />}
+              iconPosition="right"
+            >
+              View All Returns
+            </Button>
+          </Link>
+        </div>
+      </Card>
+    </AdminLayout>
   );
 }

@@ -26,7 +26,6 @@ export function useLocale() {
 export function LocaleProvider({ children, tenantId = 'default' }) {
   const [locale, setLocale] = useState('en');
   const [messages, setMessages] = useState(translations.en);
-  // Removed unused supportedLocales state
   
   // Function to change language - moved up before useEffect that depends on it
   const changeLocale = useCallback((newLocale) => {
@@ -87,7 +86,12 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
     }
     
     initLocale();
-  }, [tenantId, changeLocale]); // Added changeLocale to dependency array
+  }, [tenantId, changeLocale]);
+  
+  // Helper function to escape regex special characters
+  const escapeRegExp = useCallback((string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }, []);
   
   // Translation function with enhanced fallback and debugging
   const t = useCallback((key, params = {}) => {
@@ -113,10 +117,15 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
       return key;
     }
     
-    // Replace params in the message
-    if (typeof message === 'string') {
+    // Replace params in the message - safer method that doesn't use regex directly
+    if (typeof message === 'string' && params) {
+      // First approach: Use string replace instead of regex for simple cases
       Object.entries(params).forEach(([paramKey, value]) => {
-        message = message.replace(new RegExp(`{${paramKey}}`, 'g'), value);
+        const placeholder = `{${paramKey}}`;
+        // Use string replace instead of regex - much safer
+        while (message.includes(placeholder)) {
+          message = message.replace(placeholder, value);
+        }
       });
     }
     

@@ -83,13 +83,14 @@ export default function ReturnsManagement() {
     const rows = returns.map(ret => [
       ret.id,
       ret.order_id,
-      `"${ret.customer}"`, // Quote to handle commas in names
+      `"${typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}"`,
       ret.email,
       ret.status,
       formatDate(ret.date),
       ret.items,
       ret.total.toFixed(2)
     ].join(','));
+    
     
     // Combine header and rows
     const csv = [headers, ...rows].join('\n');
@@ -151,8 +152,9 @@ export default function ReturnsManagement() {
                       Return #{ret.id}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {ret.customer} • {formatDate(ret.date)}
+                      {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer} • {formatDate(ret.date)}
                     </p>
+
                   </div>
                   <Link href={`/admin/returns/${ret.id}`}>
                     <Button variant="primary" size="sm">
@@ -212,7 +214,9 @@ export default function ReturnsManagement() {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <span className="text-gray-600 text-xs">Return #{ret.id}</span>
-                      <h3 className="font-medium text-gray-900">{ret.customer}</h3>
+                      <h3 className="font-medium text-gray-900">
+                        {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}
+                      </h3>
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full font-medium
                       ${ret.status === 'pending' ? 'bg-amber-100 text-amber-800' : ''}
@@ -288,8 +292,12 @@ export default function ReturnsManagement() {
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{ret.customer}</div>
-                        <div className="text-xs text-gray-500">{ret.email}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.email : ret.email}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(ret.date)}
@@ -330,8 +338,8 @@ export default function ReturnsManagement() {
                             <div>
                               <h4 className="text-sm font-medium text-gray-900 mb-2">Customer Information</h4>
                               <div className="text-sm text-gray-600">
-                                <p>Name: {ret.customer}</p>
-                                <p>Email: {ret.email}</p>
+                                <p>Name: {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}</p>
+                                <p>Email: {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.email : ret.email}</p>
                                 <p>Order: {ret.order_id}</p>
                               </div>
                             </div>

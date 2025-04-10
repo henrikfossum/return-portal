@@ -1,24 +1,29 @@
-// src/pages/api/health/db-check.js
+// src/pages/api/admin/test-return.js
+import jwt from 'jsonwebtoken';
+import { createReturnRequest } from '@/lib/services/returnService';
 import connectToDatabase from '@/lib/db/connection';
-import mongoose from 'mongoose';
-
-// This is a simple API key approach - in a real production app, 
-// you might want to use environment variables for this
-const API_KEY = 'return_portal_health_check_key';
 
 export default async function handler(req, res) {
-  // Check for API key in query parameter
-  const providedKey = req.query.key;
-  
-  if (!providedKey || providedKey !== API_KEY) {
-    return res.status(403).json({ 
-      error: 'Forbidden', 
-      message: 'Invalid or missing API key'
-    });
+  // Check for admin authorization using JWT
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Authorization token required' });
+  }
+  const token = authHeader.split(' ')[1];
+
+  try {
+    jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'default-jwt-secret-replace-in-production'
+    );
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
+  // Only allow POST
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
     return res.status(405).json({ 
       error: 'Method Not Allowed', 
       message: `Method ${req.method} is not allowed` 
@@ -26,78 +31,86 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Attempt to connect to the database
-    console.log('Testing database connection...');
+    // First, explicitly check database connection
+    console.log('Testing database connection for test return...');
     await connectToDatabase();
+    console.log('Database connection successful');
     
-    // Get connection status
-    const connectionState = mongoose.connection.readyState;
-    const states = {
-      0: 'disconnected',
-      1: 'connected',
-      2: 'connecting',
-      3: 'disconnecting',
-      99: 'uninitialized'
-    };
+    // Get the test data from the request body
+    const returnData = req.body ? JSON.parse(req.body) : {};
     
-    // Check for ReturnRequest model
-    const hasReturnRequestModel = !!mongoose.models.ReturnRequest;
-    
-    // Get model information if requested
-    let modelInfo = { count: Object.keys(mongoose.models).length };
-    if (req.query.details === 'true') {
-      modelInfo.list = {};
-      Object.keys(mongoose.models).forEach(modelName => {
-        try {
-          const model = mongoose.models[modelName];
-          modelInfo.list[modelName] = {
-            collectionName: model.collection.name,
-            schema: Object.keys(model.schema.paths)
-          };
-        } catch (err) {
-          modelInfo.list[modelName] = {error: err.message};
-        }
+    // Ensure we have the minimal required fields
+    if (!returnData.orderId || !returnData.items || !Array.isArray(returnData.items)) {
+      return res.status(400).json({
+        error: 'Invalid Request',
+        message: 'Missing required fields: orderId and items array'
       });
-    } else {
-      modelInfo.models = Object.keys(mongoose.models);
     }
     
-    // Get database name
-    const dbName = mongoose.connection.db?.databaseName || 'Unknown';
+    // Add timestamps if not present
+    if (!returnData.createdAt) returnData.createdAt = new Date();
+    if (!returnData.updatedAt) returnData.updatedAt = new Date();
     
-    // Check MONGODB_URI
-    const mongoURIExists = !!process.env.MONGODB_URI;
-    const mongoURIPattern = process.env.MONGODB_URI 
-      ? process.env.MONGODB_URI.replace(/mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/, 'mongodb$1://$2:****@')
-      : 'Not set';
+    // Default status to pending if not specified
+    if (!returnData.status) returnData.status = 'pending';
+    
+    // Add status history if not present
+    if (!returnData.statusHistory) {
+      returnData.statusHistory = [{
+        status: returnData.status,
+        timestamp: new Date(),
+        notes: 'Test return created',
+        updatedBy: 'admin'
+      }];
+    }
+    
+    // Ensure tenantId is set
+    if (!returnData.tenantId) returnData.tenantId = 'default';
+    
+    console.log('Creating test return request...');
+    const savedReturn = await createReturnRequest(returnData);
     
     return res.status(200).json({
-      status: 'success',
-      connection: {
-        state: connectionState,
-        stateText: states[connectionState] || 'unknown',
-        connected: connectionState === 1,
-        database: dbName,
-        host: mongoose.connection.host || 'Unknown'
-      },
-      models: {
-        ...modelInfo,
-        hasReturnRequestModel
-      },
-      environment: {
-        node_env: process.env.NODE_ENV,
-        mongodb_uri_exists: mongoURIExists,
-        mongodb_uri_pattern: mongoURIPattern
+      message: 'Test return created successfully',
+      id: savedReturn._id.toString(),
+      details: {
+        orderId: savedReturn.orderId,
+        orderNumber: savedReturn.orderNumber,
+        status: savedReturn.status,
+        itemsCount: savedReturn.items?.length || 0,
+        createdAt: savedReturn.createdAt
       }
     });
   } catch (error) {
-    console.error('Database health check failed:', error);
+    console.error('Error creating test return:', error);
+    
+    // Provide detailed error information
+    let errorDetails = {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    };
+    
+    // Additional details for validation errors
+    if (error.name === 'ValidationError' && error.errors) {
+      errorDetails.validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        errorDetails.validationErrors[key] = error.errors[key].message;
+      });
+    }
+    
+    // Additional details for MongoDB connection errors
+    if (error.name === 'MongoNetworkError' || error.name === 'MongoServerSelectionError') {
+      errorDetails.mongodbUriExists = !!process.env.MONGODB_URI;
+      if (process.env.MONGODB_URI) {
+        errorDetails.uriPrefix = process.env.MONGODB_URI.substring(0, 10) + '...';
+      }
+    }
+    
     return res.status(500).json({
-      status: 'error',
-      message: 'Database connection failed',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      mongoURI_exists: !!process.env.MONGODB_URI
+      error: true,
+      message: `Error creating test return: ${error.message}`,
+      details: errorDetails
     });
   }
 }

@@ -126,8 +126,9 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {ret.order_id}
                       </td>
+                      {/* *** CUSTOMER COLUMN - MAKE THIS CHANGE *** */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {ret.customer}
+                        {typeof ret.customer === 'object' && ret.customer !== null ? ret.customer.name : ret.customer}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(ret.date).toLocaleDateString()}

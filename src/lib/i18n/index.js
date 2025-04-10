@@ -88,11 +88,6 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
     initLocale();
   }, [tenantId, changeLocale]);
   
-  // Helper function to escape regex special characters
-  const escapeRegExp = useCallback((string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }, []);
-  
   // Translation function with enhanced fallback and debugging
   const t = useCallback((key, params = {}) => {
     // Split the key by dots to navigate the messages object
@@ -119,7 +114,7 @@ export function LocaleProvider({ children, tenantId = 'default' }) {
     
     // Replace params in the message - safer method that doesn't use regex directly
     if (typeof message === 'string' && params) {
-      // First approach: Use string replace instead of regex for simple cases
+      // Use string replace instead of regex for simple cases
       Object.entries(params).forEach(([paramKey, value]) => {
         const placeholder = `{${paramKey}}`;
         // Use string replace instead of regex - much safer

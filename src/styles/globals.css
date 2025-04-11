@@ -151,11 +151,6 @@ body {
   font-size: var(--theme-font-size-base);
 }
 
-/* Fix for theme background only applying to the module, not the entire page */
-body {
-  background-color: initial;
-}
-
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--theme-font-family-heading), var(--font-geist-sans), Arial, Helvetica, sans-serif;
@@ -260,6 +255,21 @@ select::placeholder {
   color: var(--theme-text-color);
 }
 
+/* Target the module specifically while preserving page background */
 .return-portal-module {
   background-color: var(--theme-background-color, #ffffff);
+}
+
+/* These selectors target the return portal components specifically */
+.min-h-screen.return-portal-container,
+.max-w-xl.return-portal-container,
+.rounded-md.shadow-md.return-portal-card,
+.p-6.return-portal-container {
+  background-color: var(--theme-background-color, #ffffff) !important;
+}
+
+/* Preserve the existing body background */
+body.theme-applied {
+  /* Keep the body background as is */
+  background-color: initial;
 }

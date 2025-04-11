@@ -68,10 +68,24 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     document.head.appendChild(link);
   }, []);
 
-  // Apply theme to DOM by setting CSS variables - FIXED
+  // Extract RGB values from hex color for rgba usage
+  const hexToRgb = useCallback((hex) => {
+    if (!hex || !hex.startsWith('#')) return null;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  }, []);
+
+  // Apply theme to DOM - FIXED
   const applyThemeToDom = useCallback((themeConfig) => {
     console.log('Applying theme to DOM:', themeConfig);
     if (!themeConfig || typeof document === 'undefined') return;
+    
+    // Force removal of dark mode if light mode is active
+    if (mode === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
     
     // Apply to document element for global scope
     document.documentElement.style.setProperty('--theme-primary-color', themeConfig.primaryColor || '#4f46e5');
@@ -85,6 +99,12 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     document.documentElement.style.setProperty('--theme-heading-font-family', themeConfig.headingFontFamily || themeConfig.fontFamily || 'Inter, system-ui, sans-serif');
     document.documentElement.style.setProperty('--theme-font-size', themeConfig.fontSize || '16px');
     
+    // Add RGB versions of colors for opacity usage
+    const primaryRgb = hexToRgb(themeConfig.primaryColor);
+    if (primaryRgb) {
+      document.documentElement.style.setProperty('--theme-primary-color-rgb', primaryRgb);
+    }
+    
     // Primary color and shades
     setCssVar('--theme-primary-50', lightenColor(themeConfig.primaryColor, 0.9) || '#e6f2ff');
     setCssVar('--theme-primary-100', lightenColor(themeConfig.primaryColor, 0.8) || '#b3daff');
@@ -97,8 +117,8 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     setCssVar('--theme-primary-800', darkenColor(themeConfig.primaryColor, 0.6) || '#00335c');
     setCssVar('--theme-primary-900', darkenColor(themeConfig.primaryColor, 0.8) || '#001d33');
     
-    // Also apply to body for component scoping
-    document.body.style.backgroundColor = themeConfig.backgroundColor || '#ffffff';
+    // Also apply directly to body styles with !important to override any conflicting styles
+    document.body.style.backgroundColor = (themeConfig.backgroundColor || '#ffffff') + ' !important';
     document.body.style.color = themeConfig.textColor || '#171717';
     document.body.style.fontFamily = themeConfig.fontFamily || 'Inter, system-ui, sans-serif';
     document.body.style.fontSize = themeConfig.fontSize || '16px';
@@ -120,7 +140,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     // Add specific scoped styles to ensure theming works in the return portal
     const returnPortalStyles = `
       .return-portal-container {
-        background-color: ${themeConfig.backgroundColor || '#ffffff'};
+        background-color: ${themeConfig.backgroundColor || '#ffffff'} !important;
         color: ${themeConfig.textColor || '#171717'};
       }
       .return-portal-card {
@@ -145,6 +165,12 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       .return-portal-text-secondary {
         color: ${themeConfig.secondaryTextColor || '#6b7280'};
       }
+      body {
+        background-color: ${themeConfig.backgroundColor || '#ffffff'} !important;
+      }
+      body.theme-applied {
+        background-color: ${themeConfig.backgroundColor || '#ffffff'} !important;
+      }
     `;
     
     let portalStyleElement = document.getElementById('return-portal-theme-styles');
@@ -156,7 +182,7 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
     portalStyleElement.textContent = returnPortalStyles;
     
     console.log('Theme applied to DOM successfully');
-  }, [setCssVar, lightenColor, darkenColor]);
+  }, [setCssVar, lightenColor, darkenColor, hexToRgb, mode]);
 
   // Wrap loadTheme in useCallback so its reference remains stable
   const loadTheme = useCallback(async () => {
@@ -196,8 +222,13 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       document.documentElement.classList.remove('dark');
     }
     
+    // Reapply theme after mode change to ensure colors update
+    if (theme) {
+      applyThemeToDom(theme);
+    }
+    
     localStorage.setItem('colorMode', newMode);
-  }, [mode]);
+  }, [mode, theme, applyThemeToDom]);
   
   // Check for saved color mode preference when component mounts
   useEffect(() => {
@@ -209,6 +240,9 @@ export function ThemeProvider({ children, tenantId = 'default' }) {
       if (savedMode === 'dark') {
         setMode('dark');
         document.documentElement.classList.add('dark');
+      } else {
+        // Explicitly remove dark mode class to ensure light mode is active
+        document.documentElement.classList.remove('dark');
       }
     }
   }, []);
